@@ -19,7 +19,7 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Hallo! Ich bin ChatGPT, wie kann ich dir helfen?",
+      text: "Hallo! Ich bin GiuliGPT, wie kann ich dir helfen?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -145,7 +145,7 @@ const ChatInterface = () => {
             <span className="text-sm font-bold text-white">🤖</span>
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">ChatGPT</h1>
+            <h1 className="text-xl font-semibold text-foreground">GiuliGPT</h1>
             <p className="text-sm text-muted-foreground">Dein KI-Assistent • Powered by DeepSeek</p>
           </div>
         </div>
