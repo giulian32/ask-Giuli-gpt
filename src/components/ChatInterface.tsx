@@ -5,6 +5,9 @@ import { Send } from "lucide-react";
 import ChatMessage from "./ChatMessage";
 import { useToast } from "@/hooks/use-toast";
 
+const DEEPSEEK_API_KEY = "sk-87eb68bd2078461aaaeae98273a9f00e";
+const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
+
 interface Message {
   id: string;
   text: string;
@@ -45,45 +48,83 @@ const ChatInterface = () => {
     };
 
     setMessages((prev) => [...prev, userMessage]);
+    const currentInput = inputValue;
     setInputValue("");
     setIsLoading(true);
 
-    // Simulate AI response
-    setTimeout(() => {
+    try {
+      const response = await callDeepSeekAPI(currentInput, messages);
       const aiResponse: Message = {
         id: (Date.now() + 1).toString(),
-        text: generateResponse(inputValue),
+        text: response,
         isUser: false,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, aiResponse]);
+    } catch (error) {
+      console.error("DeepSeek API Fehler:", error);
+      const errorResponse: Message = {
+        id: (Date.now() + 1).toString(),
+        text: "Entschuldigung, es gab einen Fehler bei der Verbindung zur KI. Bitte versuche es erneut.",
+        isUser: false,
+        timestamp: new Date(),
+      };
+      setMessages((prev) => [...prev, errorResponse]);
+      toast({
+        title: "Verbindungsfehler",
+        description: "Konnte keine Antwort von der KI erhalten.",
+        variant: "destructive",
+      });
+    } finally {
       setIsLoading(false);
-    }, 1000 + Math.random() * 1000);
+    }
   };
 
-  const generateResponse = (input: string): string => {
-    const responses = [
-      "Das ist eine interessante Frage! Als KI-Assistent kann ich dir dabei helfen, das zu verstehen.",
-      "Gerne erkläre ich dir das genauer. Lass mich das für dich aufschlüsseln.",
-      "Das ist ein wichtiges Thema. Hier sind einige Gedanken dazu:",
-      "Ich verstehe deine Frage. Lass mich dir eine hilfreiche Antwort geben.",
-      "Das kann ich gerne für dich beantworten. Hier ist was ich dazu weiß:",
-    ];
+  const callDeepSeekAPI = async (userInput: string, conversationHistory: Message[]): Promise<string> => {
+    // Baue Konversationshistorie für die API auf
+    const systemMessage = {
+      role: "system",
+      content: "Du bist ChatGPT, ein KI-gestützter Assistent, der von OpenAI entwickelt wurde. Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch."
+    };
 
-    if (input.toLowerCase().includes("hallo") || input.toLowerCase().includes("hi")) {
-      return "Hallo! Schön, dich kennenzulernen. Womit kann ich dir heute helfen?";
+    const conversationMessages = conversationHistory
+      .filter(msg => msg.id !== "welcome") // Entferne die Willkommensnachricht
+      .map(msg => ({
+        role: msg.isUser ? "user" : "assistant",
+        content: msg.text
+      }));
+
+    // Füge die neue Benutzernachricht hinzu
+    conversationMessages.push({
+      role: "user",
+      content: userInput
+    });
+
+    const requestBody = {
+      model: "deepseek-chat",
+      messages: [systemMessage, ...conversationMessages],
+      temperature: 0.7,
+      max_tokens: 2048,
+      stream: false
+    };
+
+    const response = await fetch(DEEPSEEK_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${DEEPSEEK_API_KEY}`
+      },
+      body: JSON.stringify(requestBody)
+    });
+
+    if (!response.ok) {
+      throw new Error(`API-Fehler: ${response.status}`);
     }
 
-    if (input.toLowerCase().includes("wie geht") || input.toLowerCase().includes("wie geht's")) {
-      return "Danke der Nachfrage! Als KI habe ich keine Gefühle, aber ich bin bereit und freue mich darauf, dir zu helfen. Was beschäftigt dich heute?";
-    }
-
-    if (input.toLowerCase().includes("danke")) {
-      return "Gern geschehen! Ich bin immer da, um zu helfen. Gibt es noch etwas anderes, womit ich dir behilflich sein kann?";
-    }
-
-    return responses[Math.floor(Math.random() * responses.length)];
+    const data = await response.json();
+    return data.choices[0]?.message?.content || "Entschuldigung, ich konnte keine Antwort generieren.";
   };
+
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
