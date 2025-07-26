@@ -202,7 +202,7 @@ const ChatInterface = () => {
             </Button>
           </div>
           <p className="text-xs text-muted-foreground mt-3 text-center opacity-70">
-            ChatGPT kann Fehler machen. Überprüfe wichtige Informationen.
+            GiuliGPT kann Fehler machen. Überprüfe wichtige Informationen.
           </p>
         </div>
       </div>
