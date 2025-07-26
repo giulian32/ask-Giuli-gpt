@@ -134,11 +134,21 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-chat-background">
-      {/* Header */}
-      <div className="bg-card border-b px-6 py-4 shadow-sm">
-        <h1 className="text-xl font-semibold text-chat-header">ChatGPT</h1>
-        <p className="text-sm text-muted-foreground">Dein KI-Assistent</p>
+    <div className="flex flex-col h-screen" style={{ background: 'var(--chat-background)' }}>
+      {/* Header with beautiful gradient */}
+      <div 
+        className="px-6 py-4 shadow-elegant border-b border-border/50 backdrop-blur-sm"
+        style={{ background: 'var(--chat-header)' }}
+      >
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow">
+            <span className="text-sm font-bold text-white">🤖</span>
+          </div>
+          <div>
+            <h1 className="text-xl font-semibold text-foreground">ChatGPT</h1>
+            <p className="text-sm text-muted-foreground">Dein KI-Assistent • Powered by DeepSeek</p>
+          </div>
+        </div>
       </div>
 
       {/* Messages */}
@@ -167,8 +177,8 @@ const ChatInterface = () => {
         </div>
       </div>
 
-      {/* Input */}
-      <div className="border-t bg-card px-6 py-4 shadow-sm">
+      {/* Input with beautiful styling */}
+      <div className="border-t border-border/50 backdrop-blur-sm px-6 py-4" style={{ background: 'var(--chat-header)' }}>
         <div className="max-w-4xl mx-auto">
           <div className="flex gap-3 items-end">
             <div className="flex-1">
@@ -177,7 +187,7 @@ const ChatInterface = () => {
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
                 placeholder="Stelle eine Frage..."
-                className="min-h-[44px] bg-chat-input-bg resize-none border-border"
+                className="min-h-[50px] bg-chat-input-bg resize-none border-border/50 rounded-xl shadow-sm transition-all duration-300 focus:shadow-elegant focus:border-primary/50"
                 disabled={isLoading}
               />
             </div>
@@ -185,12 +195,13 @@ const ChatInterface = () => {
               onClick={handleSend}
               disabled={!inputValue.trim() || isLoading}
               size="icon"
-              className="h-[44px] w-[44px] bg-primary hover:bg-primary/90"
+              className="h-[50px] w-[50px] rounded-xl shadow-elegant transition-all duration-300 hover:shadow-glow"
+              style={{ background: 'var(--gradient-primary)' }}
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-5 w-5" />
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground mt-2 text-center">
+          <p className="text-xs text-muted-foreground mt-3 text-center opacity-70">
             ChatGPT kann Fehler machen. Überprüfe wichtige Informationen.
           </p>
         </div>

@@ -8,21 +8,22 @@ interface ChatMessageProps {
 
 const ChatMessage = ({ message, isUser, timestamp }: ChatMessageProps) => {
   return (
-    <div className={cn("flex w-full mb-4", isUser ? "justify-end" : "justify-start")}>
+    <div className={cn("flex w-full mb-6", isUser ? "justify-end" : "justify-start")}>
       <div className="flex flex-col max-w-[80%] md:max-w-[70%]">
         <div
           className={cn(
-            "rounded-2xl px-4 py-3 shadow-sm",
+            "rounded-2xl px-5 py-4 shadow-sm transition-all duration-300 hover:shadow-md",
             isUser
-              ? "bg-chat-user-bubble text-chat-user-text ml-auto"
-              : "bg-chat-ai-bubble text-chat-ai-text border"
+              ? "text-chat-user-text ml-auto shadow-elegant"
+              : "bg-chat-ai-bubble text-chat-ai-text border border-border/50 backdrop-blur-sm"
           )}
+          style={isUser ? { background: 'var(--gradient-primary)' } : {}}
         >
           <p className="text-sm leading-relaxed whitespace-pre-wrap">{message}</p>
         </div>
         <span
           className={cn(
-            "text-xs text-muted-foreground mt-1",
+            "text-xs text-muted-foreground/70 mt-2",
             isUser ? "text-right" : "text-left"
           )}
         >

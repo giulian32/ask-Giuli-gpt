@@ -53,13 +53,13 @@ export default {
 					foreground: 'hsl(var(--card-foreground))'
 				},
 				chat: {
-					background: 'hsl(var(--chat-background))',
-					'user-bubble': 'hsl(var(--chat-user-bubble))',
+					background: 'var(--chat-background)',
+					'user-bubble': 'var(--chat-user-bubble)',
 					'user-text': 'hsl(var(--chat-user-text))',
 					'ai-bubble': 'hsl(var(--chat-ai-bubble))',
 					'ai-text': 'hsl(var(--chat-ai-text))',
 					'input-bg': 'hsl(var(--chat-input-bg))',
-					header: 'hsl(var(--chat-header))'
+					header: 'var(--chat-header)'
 				},
 				sidebar: {
 					DEFAULT: 'hsl(var(--sidebar-background))',
@@ -71,6 +71,14 @@ export default {
 					border: 'hsl(var(--sidebar-border))',
 					ring: 'hsl(var(--sidebar-ring))'
 				}
+			},
+			backgroundImage: {
+				'gradient-primary': 'var(--gradient-primary)',
+				'gradient-background': 'var(--gradient-background)'
+			},
+			boxShadow: {
+				'elegant': 'var(--shadow-elegant)',
+				'glow': 'var(--gradient-glow)'
 			},
 			borderRadius: {
 				lg: 'var(--radius)',
