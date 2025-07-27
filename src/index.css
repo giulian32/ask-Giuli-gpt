@@ -37,24 +37,28 @@ All colors MUST be HSL.
     --input: 220 15% 12%;
     --ring: 262 83% 58%;
 
-    /* Beautiful chat-specific design tokens */
-    --chat-background: linear-gradient(135deg, hsl(220 15% 6%), hsl(225 20% 8%));
+    /* Enhanced chat colors with beautiful gradients */
+    --chat-background: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 25%, #16213e 50%, #0f3460 75%, #1e3a5f 100%);
+    --chat-header: linear-gradient(90deg, rgba(138, 43, 226, 0.1) 0%, rgba(30, 144, 255, 0.1) 50%, rgba(138, 43, 226, 0.1) 100%);
     --chat-user-bubble: linear-gradient(135deg, hsl(262 83% 58%), hsl(270 70% 50%));
     --chat-user-text: 220 15% 95%;
-    --chat-ai-bubble: 220 20% 10%;
+    --chat-ai-bubble: linear-gradient(135deg, rgba(255,255,255,0.12) 0%, rgba(138, 43, 226, 0.1) 50%, rgba(255,255,255,0.08) 100%);
     --chat-ai-text: 220 15% 90%;
-    --chat-input-bg: 220 15% 10%;
-    --chat-header: linear-gradient(135deg, hsl(220 20% 8%), hsl(225 25% 12%));
+    --chat-input-bg: linear-gradient(90deg, rgba(255,255,255,0.1) 0%, rgba(138, 43, 226, 0.05) 100%);
     
-    /* Beautiful gradients and effects */
+    /* Enhanced gradients and shadows with premium effects */
     --gradient-primary: linear-gradient(135deg, hsl(262 83% 58%), hsl(270 70% 50%));
     --gradient-background: linear-gradient(135deg, hsl(220 15% 6%), hsl(225 20% 8%));
-    --gradient-glow: 0 0 30px hsl(262 83% 58% / 0.3);
-    --shadow-elegant: 0 10px 30px -10px hsl(262 83% 58% / 0.3);
+    --shadow-elegant: 0 20px 60px -20px hsl(262 83% 58% / 0.4), 0 0 40px hsl(262 83% 58% / 0.1);
+    --shadow-glow: 0 0 60px hsl(262 83% 58% / 0.6), 0 0 100px hsl(262 83% 58% / 0.2);
+    --shadow-soft: 0 8px 32px -8px hsl(220 15% 6% / 0.3);
+    --shadow-premium: 0 25px 80px -25px rgba(138, 43, 226, 0.4), 0 0 50px rgba(30, 144, 255, 0.2);
     --border-glow: 1px solid hsl(262 83% 58% / 0.3);
     
-    /* Animations */
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    /* Smooth transitions with spring animations */
+    --transition-smooth: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+    --transition-spring: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 
     --radius: 0.5rem;
 
