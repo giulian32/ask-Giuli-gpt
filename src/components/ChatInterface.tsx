@@ -26,8 +26,17 @@ const ChatInterface = () => {
   ]);
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showWelcome, setShowWelcome] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Hide welcome animation after 3 seconds
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setShowWelcome(false);
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, []);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -134,12 +143,38 @@ const ChatInterface = () => {
   };
 
   return (
-    <div className="flex flex-col h-screen" style={{ background: 'var(--chat-background)' }}>
-      {/* Header with beautiful gradient and animations */}
-      <div 
-        className="px-6 py-5 shadow-premium border-b border-border/30 backdrop-blur-xl relative overflow-hidden"
-        style={{ background: 'var(--chat-header)' }}
-      >
+    <>
+      {/* Welcome Animation Overlay */}
+      {showWelcome && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
+          <div className="text-center animate-fade-in">
+            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow animate-pulse-glow">
+              <span className="text-3xl">🤖</span>
+            </div>
+            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent mb-2 animate-fade-in" style={{ animationDelay: "0.5s" }}>
+              Willkommen bei GiuliGPT
+            </h1>
+            <p className="text-muted-foreground/80 text-lg animate-fade-in" style={{ animationDelay: "1s" }}>
+              Dein intelligenter KI-Assistent
+            </p>
+            <div className="mt-8 flex justify-center animate-fade-in" style={{ animationDelay: "1.5s" }}>
+              <div className="flex space-x-2">
+                <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
+                <div className="w-3 h-3 bg-primary-glow rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Main Chat Interface */}
+      <div className="flex flex-col h-screen" style={{ background: 'var(--chat-background)' }}>
+        {/* Header with beautiful gradient and animations */}
+        <div 
+          className="px-6 py-5 shadow-premium border-b border-border/30 backdrop-blur-xl relative overflow-hidden"
+          style={{ background: 'var(--chat-header)' }}
+        >
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-10">
           <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-primary-glow/20 animate-pulse"></div>
@@ -160,75 +195,76 @@ const ChatInterface = () => {
             </p>
           </div>
         </div>
-      </div>
+        </div>
 
-      {/* Messages with enhanced styling */}
-      <div className="flex-1 overflow-y-auto px-6 py-6">
-        <div className="max-w-4xl mx-auto space-y-4">
-          {messages.map((message) => (
-            <ChatMessage
-              key={message.id}
-              message={message.text}
-              isUser={message.isUser}
-              timestamp={message.timestamp}
-            />
-          ))}
-          {isLoading && (
-            <div className="flex justify-start mb-6 animate-fade-in">
-              <div className="bg-chat-ai-bubble border border-white/10 rounded-2xl px-6 py-4 max-w-[80%] md:max-w-[70%] shadow-soft backdrop-blur-sm">
-                <div className="flex items-center space-x-3">
-                  <div className="flex space-x-1">
-                    <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
-                    <div className="w-2 h-2 bg-primary-glow/60 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                    <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+        {/* Messages with black background */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 bg-black/60 backdrop-blur-sm">
+          <div className="max-w-4xl mx-auto space-y-4">
+            {messages.map((message) => (
+              <ChatMessage
+                key={message.id}
+                message={message.text}
+                isUser={message.isUser}
+                timestamp={message.timestamp}
+              />
+            ))}
+            {isLoading && (
+              <div className="flex justify-start mb-6 animate-fade-in">
+                <div className="bg-chat-ai-bubble border border-white/10 rounded-2xl px-6 py-4 max-w-[80%] md:max-w-[70%] shadow-soft backdrop-blur-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="flex space-x-1">
+                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
+                      <div className="w-2 h-2 bg-primary-glow/60 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
+                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                    </div>
+                    <span className="text-xs text-muted-foreground/80 font-medium">GiuliGPT denkt nach...</span>
                   </div>
-                  <span className="text-xs text-muted-foreground/80 font-medium">GiuliGPT denkt nach...</span>
                 </div>
               </div>
-            </div>
-          )}
-          <div ref={messagesEndRef} />
-        </div>
-      </div>
-
-      {/* Input with premium styling and animations */}
-      <div className="border-t border-border/30 backdrop-blur-xl px-6 py-5 relative overflow-hidden" style={{ background: 'var(--chat-header)' }}>
-        {/* Subtle animated background */}
-        <div className="absolute inset-0 opacity-5">
-          <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary-glow/10 animate-pulse"></div>
-        </div>
-        
-        <div className="max-w-4xl mx-auto relative z-10">
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Input
-                value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
-                onKeyPress={handleKeyPress}
-                placeholder="Stelle eine Frage..."
-                className="min-h-[56px] text-base bg-chat-input-bg backdrop-blur-sm resize-none border-border/30 rounded-2xl shadow-soft transition-all duration-500 focus:shadow-premium focus:border-primary/40 focus:bg-white/[0.15] hover:bg-white/[0.12] font-medium placeholder:text-muted-foreground/60"
-                disabled={isLoading}
-              />
-            </div>
-            <Button
-              onClick={handleSend}
-              disabled={!inputValue.trim() || isLoading}
-              size="icon"
-              className="h-[56px] w-[56px] rounded-2xl shadow-premium transition-all duration-500 hover:shadow-glow hover:scale-105 active:scale-95 relative overflow-hidden group"
-              style={{ background: 'var(--gradient-primary)' }}
-            >
-              {/* Button shimmer effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-300"></div>
-              <Send className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-12" />
-            </Button>
+            )}
+            <div ref={messagesEndRef} />
           </div>
-          <p className="text-xs text-muted-foreground/70 mt-4 text-center font-medium tracking-wide">
-            <span className="opacity-60">GiuliGPT kann Fehler machen.</span>
-            <span className="text-primary/60 ml-1">Überprüfe wichtige Informationen.</span>
-          </p>
+        </div>
+
+        {/* Input with premium styling and animations */}
+        <div className="border-t border-border/30 backdrop-blur-xl px-6 py-5 relative overflow-hidden" style={{ background: 'var(--chat-header)' }}>
+          {/* Subtle animated background */}
+          <div className="absolute inset-0 opacity-5">
+            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary-glow/10 animate-pulse"></div>
+          </div>
+          
+          <div className="max-w-4xl mx-auto relative z-10">
+            <div className="flex gap-4 items-end">
+              <div className="flex-1">
+                <Input
+                  value={inputValue}
+                  onChange={(e) => setInputValue(e.target.value)}
+                  onKeyPress={handleKeyPress}
+                  placeholder="Stelle eine Frage..."
+                  className="min-h-[56px] text-base bg-chat-input-bg backdrop-blur-sm resize-none border-border/30 rounded-2xl shadow-soft transition-all duration-500 focus:shadow-premium focus:border-primary/40 focus:bg-white/[0.15] hover:bg-white/[0.12] font-medium placeholder:text-muted-foreground/60"
+                  disabled={isLoading}
+                />
+              </div>
+              <Button
+                onClick={handleSend}
+                disabled={!inputValue.trim() || isLoading}
+                size="icon"
+                className="h-[56px] w-[56px] rounded-2xl shadow-premium transition-all duration-500 hover:shadow-glow hover:scale-105 active:scale-95 relative overflow-hidden group"
+                style={{ background: 'var(--gradient-primary)' }}
+              >
+                {/* Button shimmer effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-300"></div>
+                <Send className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-12" />
+              </Button>
+            </div>
+            <p className="text-xs text-muted-foreground/70 mt-4 text-center font-medium tracking-wide">
+              <span className="opacity-60">GiuliGPT kann Fehler machen.</span>
+              <span className="text-primary/60 ml-1">Überprüfe wichtige Informationen.</span>
+            </p>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 };
 
