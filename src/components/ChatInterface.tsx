@@ -29,16 +29,22 @@ const ChatInterface = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
+  const [isDarkMode, setIsDarkMode] = useState(true);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
-  // Hide welcome animation after 3 seconds
+  // Hide welcome animation after 4 seconds with smoother transition
   useEffect(() => {
     const timer = setTimeout(() => {
       setShowWelcome(false);
-    }, 3000);
+    }, 4000);
     return () => clearTimeout(timer);
   }, []);
+
+  // Apply theme changes
+  useEffect(() => {
+    document.documentElement.classList.toggle('light', !isDarkMode);
+  }, [isDarkMode]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -161,24 +167,24 @@ const ChatInterface = () => {
 
   return (
     <>
-      {/* Welcome Animation Overlay */}
+      {/* Welcome Animation Overlay - Fixed animations */}
       {showWelcome && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md">
-          <div className="text-center animate-bounce-in">
-            <div className="w-28 h-28 mx-auto mb-8 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow animate-floating relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md transition-opacity duration-1000">
+          <div className="text-center">
+            <div className="w-28 h-28 mx-auto mb-8 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow relative overflow-hidden animate-bounce-in">
               <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
-              <span className="text-4xl relative z-10">🤖</span>
+              <span className="text-4xl relative z-10 animate-floating">🤖</span>
             </div>
-            <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-primary-glow to-white bg-clip-text text-transparent mb-4 animate-slide-up drop-shadow-lg" style={{ animationDelay: "0.3s", textShadow: 'var(--text-glow)' }}>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-primary-glow to-white bg-clip-text text-transparent mb-4 animate-slide-up opacity-0" style={{ animationDelay: "0.5s", animationFillMode: "forwards" }}>
               Willkommen bei GiuliGPT
             </h1>
-            <p className="text-muted-foreground/90 text-xl mb-4 animate-slide-up font-medium" style={{ animationDelay: "0.6s" }}>
+            <p className="text-muted-foreground/90 text-xl mb-4 animate-slide-up opacity-0 font-medium" style={{ animationDelay: "0.8s", animationFillMode: "forwards" }}>
               Dein ehrlicher und intelligenter KI-Assistent
             </p>
-            <p className="text-primary/80 text-sm mb-8 animate-slide-up font-semibold" style={{ animationDelay: "0.9s" }}>
+            <p className="text-primary/80 text-sm mb-8 animate-slide-up opacity-0 font-semibold" style={{ animationDelay: "1.1s", animationFillMode: "forwards" }}>
               ✨ Ich lüge nie und sage dir immer die Wahrheit ✨
             </p>
-            <div className="mt-8 flex justify-center animate-slide-up" style={{ animationDelay: "1.2s" }}>
+            <div className="mt-8 flex justify-center animate-slide-up opacity-0" style={{ animationDelay: "1.4s", animationFillMode: "forwards" }}>
               <div className="flex space-x-3">
                 <div className="w-4 h-4 bg-primary rounded-full animate-bounce shadow-glow"></div>
                 <div className="w-4 h-4 bg-primary-glow rounded-full animate-bounce shadow-glow" style={{ animationDelay: "0.2s" }}></div>
@@ -190,11 +196,11 @@ const ChatInterface = () => {
       )}
 
       {/* Main Chat Interface */}
-      <div className="flex flex-col h-screen" style={{ background: 'var(--chat-background)' }}>
+      <div className={`flex flex-col h-screen transition-colors duration-500 ${isDarkMode ? '' : 'light-mode'}`} style={{ background: isDarkMode ? 'var(--chat-background)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
         {/* Header with beautiful gradient and animations */}
         <div 
-          className="px-6 py-5 shadow-premium border-b border-border/30 backdrop-blur-xl relative overflow-hidden"
-          style={{ background: 'var(--chat-header)' }}
+          className="px-6 py-5 shadow-premium border-b border-border/30 backdrop-blur-xl relative overflow-hidden transition-colors duration-500"
+          style={{ background: isDarkMode ? 'var(--chat-header)' : 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)' }}
         >
         {/* Animated background pattern */}
         <div className="absolute inset-0 opacity-10">
@@ -208,12 +214,12 @@ const ChatInterface = () => {
               <span className="text-lg font-bold text-white relative z-10">🤖</span>
             </div>
             <div className="space-y-1">
-              <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent tracking-tight">
+              <h1 className={`text-2xl font-bold tracking-tight transition-colors duration-500 ${isDarkMode ? 'bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent' : 'text-gray-800'}`}>
                 GiuliGPT
               </h1>
-              <p className="text-sm text-muted-foreground/90 font-medium">
+              <p className={`text-sm font-medium transition-colors duration-500 ${isDarkMode ? 'text-muted-foreground/90' : 'text-gray-600'}`}>
                 Dein KI-Assistent • 
-                <span className="text-primary/80 ml-1 font-semibold">Powered by DeepSeek</span>
+                <span className={`ml-1 font-semibold transition-colors duration-500 ${isDarkMode ? 'text-primary/80' : 'text-blue-600'}`}>Powered by DeepSeek</span>
               </p>
             </div>
           </div>
@@ -223,10 +229,10 @@ const ChatInterface = () => {
               onClick={clearChat}
               variant="ghost"
               size="icon"
-              className="w-9 h-9 rounded-xl hover:bg-white/10 transition-all duration-300 hover:scale-105 group"
+              className={`w-9 h-9 rounded-xl transition-all duration-300 hover:scale-105 group ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-200/70'}`}
               title="Chat leeren"
             >
-              <Trash2 className="h-4 w-4 text-white/70 group-hover:text-white transition-colors" />
+              <Trash2 className={`h-4 w-4 transition-colors group-hover:scale-110 ${isDarkMode ? 'text-white/70 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-800'}`} />
             </Button>
             
             <Dialog open={showSettings} onOpenChange={setShowSettings}>
@@ -234,21 +240,41 @@ const ChatInterface = () => {
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="w-9 h-9 rounded-xl hover:bg-white/10 transition-all duration-300 hover:scale-105 group"
+                  className={`w-9 h-9 rounded-xl transition-all duration-300 hover:scale-105 group ${isDarkMode ? 'hover:bg-white/10' : 'hover:bg-gray-200/70'}`}
                   title="Einstellungen"
                 >
-                  <Settings className="h-4 w-4 text-white/70 group-hover:text-white transition-colors animate-spin-slow" />
+                  <Settings className={`h-4 w-4 transition-all duration-300 group-hover:scale-110 group-hover:rotate-90 ${isDarkMode ? 'text-white/70 group-hover:text-white' : 'text-gray-600 group-hover:text-gray-800'}`} />
                 </Button>
               </DialogTrigger>
-              <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-white/20 backdrop-blur-xl">
+              <DialogContent className={`border backdrop-blur-xl transition-colors duration-500 ${isDarkMode ? 'bg-gradient-to-br from-gray-900 to-black border-white/20' : 'bg-white border-gray-200'}`}>
                 <DialogHeader>
-                  <DialogTitle className="text-white text-xl font-bold">Einstellungen</DialogTitle>
+                  <DialogTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Einstellungen</DialogTitle>
                 </DialogHeader>
                 <div className="space-y-6 py-4">
                   <div className="space-y-3">
-                    <h3 className="text-white font-semibold">Über GiuliGPT</h3>
-                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                      <p className="text-white/80 text-sm leading-relaxed">
+                    <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Design</h3>
+                    <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className={`font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Dark Mode</p>
+                          <p className={`text-sm transition-colors duration-500 ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Zwischen hellem und dunklem Design wechseln</p>
+                        </div>
+                        <Button
+                          onClick={() => setIsDarkMode(!isDarkMode)}
+                          variant="outline"
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                        >
+                          {isDarkMode ? '🌙 Dark' : '☀️ Light'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Über GiuliGPT</h3>
+                    <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                      <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
                         🤖 <strong className="text-primary">GiuliGPT</strong> ist ein ehrlicher KI-Assistent<br/>
                         👨‍💻 Programmiert von <strong className="text-primary-glow">Giuli</strong><br/>
                         ⚡ Entwickelt mit <strong className="text-primary">Loveable</strong><br/>
@@ -258,9 +284,9 @@ const ChatInterface = () => {
                   </div>
                   
                   <div className="space-y-3">
-                    <h3 className="text-white font-semibold">Features</h3>
-                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
-                      <ul className="text-white/80 text-sm space-y-2">
+                    <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Features</h3>
+                    <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                      <ul className={`text-sm space-y-2 transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
                         <li>✅ Immer ehrliche Antworten</li>
                         <li>🔍 Kennzeichnung unverifizierbarer Inhalte</li>
                         <li>🚫 Niemals Lügen oder Spekulationen als Fakten</li>
@@ -275,8 +301,8 @@ const ChatInterface = () => {
         </div>
         </div>
 
-        {/* Messages with black background and enhanced animations */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 bg-black/60 backdrop-blur-sm relative">
+        {/* Messages with adaptive background and enhanced animations */}
+        <div className={`flex-1 overflow-y-auto px-6 py-6 backdrop-blur-sm relative transition-colors duration-500 ${isDarkMode ? 'bg-black/60' : 'bg-white/60'}`}>
           {/* Floating particles animation */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">
             <div className="absolute w-2 h-2 bg-primary/20 rounded-full animate-float-1" style={{ top: '10%', left: '15%' }}></div>
@@ -320,11 +346,11 @@ const ChatInterface = () => {
           </div>
         </div>
 
-        {/* Input with premium styling and animations */}
-        <div className="border-t border-border/30 backdrop-blur-xl px-6 py-5 relative overflow-hidden" style={{ background: 'var(--chat-header)' }}>
+        {/* Input with premium styling and adaptive theme */}
+        <div className={`border-t backdrop-blur-xl px-6 py-5 relative overflow-hidden transition-colors duration-500 ${isDarkMode ? 'border-border/30' : 'border-gray-200'}`} style={{ background: isDarkMode ? 'var(--chat-header)' : 'linear-gradient(135deg, #ffffff 0%, #f1f5f9 100%)' }}>
           {/* Subtle animated background */}
           <div className="absolute inset-0 opacity-5">
-            <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-primary-glow/10 animate-pulse"></div>
+            <div className={`absolute inset-0 animate-pulse transition-colors duration-500 ${isDarkMode ? 'bg-gradient-to-r from-primary/10 via-transparent to-primary-glow/10' : 'bg-gradient-to-r from-blue-500/10 via-transparent to-blue-300/10'}`}></div>
           </div>
           
           <div className="max-w-4xl mx-auto relative z-10">
@@ -335,7 +361,11 @@ const ChatInterface = () => {
                   onChange={(e) => setInputValue(e.target.value)}
                   onKeyPress={handleKeyPress}
                   placeholder="Stelle eine Frage..."
-                  className="min-h-[56px] text-base bg-chat-input-bg backdrop-blur-sm resize-none border-border/30 rounded-2xl shadow-soft transition-all duration-500 focus:shadow-premium focus:border-primary/40 focus:bg-white/[0.15] hover:bg-white/[0.12] font-medium placeholder:text-muted-foreground/60"
+                  className={`min-h-[56px] text-base backdrop-blur-sm resize-none rounded-2xl shadow-soft transition-all duration-500 font-medium ${
+                    isDarkMode 
+                      ? 'bg-chat-input-bg border-border/30 focus:shadow-premium focus:border-primary/40 focus:bg-white/[0.15] hover:bg-white/[0.12] placeholder:text-muted-foreground/60' 
+                      : 'bg-white border-gray-300 focus:shadow-lg focus:border-blue-400 focus:bg-blue-50/30 hover:bg-gray-50 placeholder:text-gray-500'
+                  }`}
                   disabled={isLoading}
                 />
               </div>
@@ -343,17 +373,19 @@ const ChatInterface = () => {
                 onClick={handleSend}
                 disabled={!inputValue.trim() || isLoading}
                 size="icon"
-                className="h-[56px] w-[56px] rounded-2xl shadow-premium transition-all duration-500 hover:shadow-glow hover:scale-105 active:scale-95 relative overflow-hidden group"
-                style={{ background: 'var(--gradient-primary)' }}
+                className={`h-[56px] w-[56px] rounded-2xl shadow-premium transition-all duration-500 hover:scale-105 active:scale-95 relative overflow-hidden group ${
+                  isDarkMode ? '' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+                style={{ background: isDarkMode ? 'var(--gradient-primary)' : undefined }}
               >
                 {/* Button shimmer effect */}
                 <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent opacity-0 group-hover:opacity-100 group-hover:animate-shimmer transition-opacity duration-300"></div>
                 <Send className="h-6 w-6 relative z-10 transition-transform duration-300 group-hover:rotate-12" />
               </Button>
             </div>
-            <p className="text-xs text-muted-foreground/70 mt-4 text-center font-medium tracking-wide">
+            <p className={`text-xs mt-4 text-center font-medium tracking-wide transition-colors duration-500 ${isDarkMode ? 'text-muted-foreground/70' : 'text-gray-500'}`}>
               <span className="opacity-60">GiuliGPT kann Fehler machen.</span>
-              <span className="text-primary/60 ml-1">Überprüfe wichtige Informationen.</span>
+              <span className={`ml-1 ${isDarkMode ? 'text-primary/60' : 'text-blue-600'}`}>Überprüfe wichtige Informationen.</span>
             </p>
           </div>
         </div>
