@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Send } from "lucide-react";
+import { Send, Settings, Trash2 } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ChatMessage from "./ChatMessage";
 import { useToast } from "@/hooks/use-toast";
 
@@ -27,6 +28,7 @@ const ChatInterface = () => {
   const [inputValue, setInputValue] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [showWelcome, setShowWelcome] = useState(true);
+  const [showSettings, setShowSettings] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -93,7 +95,7 @@ const ChatInterface = () => {
     // Baue Konversationshistorie für die API auf
     const systemMessage = {
       role: "system",
-      content: "Du bist GiuliGPT, ein KI-gestützter Assistent. Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt."
+      content: "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable. Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt."
     };
 
     const conversationMessages = conversationHistory
@@ -132,6 +134,21 @@ const ChatInterface = () => {
 
     const data = await response.json();
     return data.choices[0]?.message?.content || "Entschuldigung, ich konnte keine Antwort generieren.";
+  };
+
+  const clearChat = () => {
+    setMessages([
+      {
+        id: "welcome",
+        text: "Hallo! Ich bin GiuliGPT, dein ehrlicher KI-Assistent. 🤖\n\nIch bin darauf programmiert, immer ehrlich zu sein und niemals zu lügen. Wenn ich etwas nicht weiß oder nicht verifizieren kann, sage ich es dir direkt.\n\nWie kann ich dir heute helfen?",
+        isUser: false,
+        timestamp: new Date(),
+      },
+    ]);
+    toast({
+      title: "Chat geleert",
+      description: "Alle Nachrichten wurden erfolgreich gelöscht.",
+    });
   };
 
 
@@ -184,45 +201,118 @@ const ChatInterface = () => {
           <div className="absolute inset-0 bg-gradient-to-r from-primary/20 via-transparent to-primary-glow/20 animate-pulse"></div>
         </div>
         
-        <div className="flex items-center gap-4 relative z-10">
-          <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow animate-pulse-glow relative overflow-hidden">
-            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
-            <span className="text-lg font-bold text-white relative z-10">🤖</span>
+        <div className="flex items-center justify-between relative z-10">
+          <div className="flex items-center gap-4">
+            <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow animate-pulse-glow relative overflow-hidden">
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent animate-shimmer"></div>
+              <span className="text-lg font-bold text-white relative z-10">🤖</span>
+            </div>
+            <div className="space-y-1">
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent tracking-tight">
+                GiuliGPT
+              </h1>
+              <p className="text-sm text-muted-foreground/90 font-medium">
+                Dein KI-Assistent • 
+                <span className="text-primary/80 ml-1 font-semibold">Powered by DeepSeek</span>
+              </p>
+            </div>
           </div>
-          <div className="space-y-1">
-            <h1 className="text-2xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent tracking-tight">
-              GiuliGPT
-            </h1>
-            <p className="text-sm text-muted-foreground/90 font-medium">
-              Dein KI-Assistent • 
-              <span className="text-primary/80 ml-1 font-semibold">Powered by DeepSeek</span>
-            </p>
+          
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={clearChat}
+              variant="ghost"
+              size="icon"
+              className="w-9 h-9 rounded-xl hover:bg-white/10 transition-all duration-300 hover:scale-105 group"
+              title="Chat leeren"
+            >
+              <Trash2 className="h-4 w-4 text-white/70 group-hover:text-white transition-colors" />
+            </Button>
+            
+            <Dialog open={showSettings} onOpenChange={setShowSettings}>
+              <DialogTrigger asChild>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="w-9 h-9 rounded-xl hover:bg-white/10 transition-all duration-300 hover:scale-105 group"
+                  title="Einstellungen"
+                >
+                  <Settings className="h-4 w-4 text-white/70 group-hover:text-white transition-colors animate-spin-slow" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="bg-gradient-to-br from-gray-900 to-black border border-white/20 backdrop-blur-xl">
+                <DialogHeader>
+                  <DialogTitle className="text-white text-xl font-bold">Einstellungen</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-6 py-4">
+                  <div className="space-y-3">
+                    <h3 className="text-white font-semibold">Über GiuliGPT</h3>
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <p className="text-white/80 text-sm leading-relaxed">
+                        🤖 <strong className="text-primary">GiuliGPT</strong> ist ein ehrlicher KI-Assistent<br/>
+                        👨‍💻 Programmiert von <strong className="text-primary-glow">Giuli</strong><br/>
+                        ⚡ Entwickelt mit <strong className="text-primary">Loveable</strong><br/>
+                        🧠 Angetrieben von <strong className="text-primary-glow">DeepSeek</strong>
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h3 className="text-white font-semibold">Features</h3>
+                    <div className="bg-white/5 rounded-lg p-4 border border-white/10">
+                      <ul className="text-white/80 text-sm space-y-2">
+                        <li>✅ Immer ehrliche Antworten</li>
+                        <li>🔍 Kennzeichnung unverifizierbarer Inhalte</li>
+                        <li>🚫 Niemals Lügen oder Spekulationen als Fakten</li>
+                        <li>💬 Intelligente Konversationen auf Deutsch</li>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
         </div>
         </div>
 
-        {/* Messages with black background */}
-        <div className="flex-1 overflow-y-auto px-6 py-6 bg-black/60 backdrop-blur-sm">
-          <div className="max-w-4xl mx-auto space-y-4">
-            {messages.map((message) => (
-              <ChatMessage
-                key={message.id}
-                message={message.text}
-                isUser={message.isUser}
-                timestamp={message.timestamp}
-              />
+        {/* Messages with black background and enhanced animations */}
+        <div className="flex-1 overflow-y-auto px-6 py-6 bg-black/60 backdrop-blur-sm relative">
+          {/* Floating particles animation */}
+          <div className="absolute inset-0 overflow-hidden pointer-events-none">
+            <div className="absolute w-2 h-2 bg-primary/20 rounded-full animate-float-1" style={{ top: '10%', left: '15%' }}></div>
+            <div className="absolute w-1 h-1 bg-primary-glow/30 rounded-full animate-float-2" style={{ top: '20%', right: '20%' }}></div>
+            <div className="absolute w-1.5 h-1.5 bg-primary/15 rounded-full animate-float-3" style={{ bottom: '30%', left: '25%' }}></div>
+          </div>
+          
+          <div className="max-w-4xl mx-auto space-y-4 relative z-10">
+            {messages.map((message, index) => (
+              <div 
+                key={message.id} 
+                className="animate-message-enter"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <ChatMessage
+                  message={message.text}
+                  isUser={message.isUser}
+                  timestamp={message.timestamp}
+                />
+              </div>
             ))}
             {isLoading && (
               <div className="flex justify-start mb-6 animate-fade-in">
-                <div className="bg-chat-ai-bubble border border-white/10 rounded-2xl px-6 py-4 max-w-[80%] md:max-w-[70%] shadow-soft backdrop-blur-sm">
-                  <div className="flex items-center space-x-3">
+                <div className="bg-chat-ai-bubble border border-white/10 rounded-2xl px-6 py-4 max-w-[80%] md:max-w-[70%] shadow-soft backdrop-blur-sm relative overflow-hidden">
+                  {/* Thinking animation background */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-primary/5 via-primary-glow/10 to-primary/5 animate-pulse-glow"></div>
+                  <div className="flex items-center space-x-3 relative z-10">
                     <div className="flex space-x-1">
-                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce"></div>
-                      <div className="w-2 h-2 bg-primary-glow/60 rounded-full animate-bounce" style={{ animationDelay: "0.1s" }}></div>
-                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
+                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce-slow"></div>
+                      <div className="w-2 h-2 bg-primary-glow/60 rounded-full animate-bounce-slow" style={{ animationDelay: "0.2s" }}></div>
+                      <div className="w-2 h-2 bg-primary/60 rounded-full animate-bounce-slow" style={{ animationDelay: "0.4s" }}></div>
                     </div>
-                    <span className="text-xs text-muted-foreground/80 font-medium">GiuliGPT denkt nach...</span>
+                    <span className="text-xs text-muted-foreground/80 font-medium animate-pulse">GiuliGPT denkt nach...</span>
                   </div>
+                  {/* Shimmer effect */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-shimmer-slow"></div>
                 </div>
               </div>
             )}
