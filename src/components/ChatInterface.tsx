@@ -19,7 +19,7 @@ const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
-      text: "Hallo! Ich bin GiuliGPT, wie kann ich dir helfen?",
+      text: "Hallo! Ich bin GiuliGPT, dein ehrlicher KI-Assistent. 🤖\n\nIch bin darauf programmiert, immer ehrlich zu sein und niemals zu lügen. Wenn ich etwas nicht weiß oder nicht verifizieren kann, sage ich es dir direkt.\n\nWie kann ich dir heute helfen?",
       isUser: false,
       timestamp: new Date(),
     },
@@ -146,22 +146,26 @@ const ChatInterface = () => {
     <>
       {/* Welcome Animation Overlay */}
       {showWelcome && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90 backdrop-blur-sm">
-          <div className="text-center animate-fade-in">
-            <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow animate-pulse-glow">
-              <span className="text-3xl">🤖</span>
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/95 backdrop-blur-md">
+          <div className="text-center animate-bounce-in">
+            <div className="w-28 h-28 mx-auto mb-8 rounded-full bg-gradient-primary flex items-center justify-center shadow-glow animate-floating relative">
+              <div className="absolute inset-0 rounded-full bg-gradient-to-r from-transparent via-white/30 to-transparent animate-shimmer"></div>
+              <span className="text-4xl relative z-10">🤖</span>
             </div>
-            <h1 className="text-4xl font-bold bg-gradient-to-r from-white to-white/80 bg-clip-text text-transparent mb-2 animate-fade-in" style={{ animationDelay: "0.5s" }}>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-white via-primary-glow to-white bg-clip-text text-transparent mb-4 animate-slide-up drop-shadow-lg" style={{ animationDelay: "0.3s", textShadow: 'var(--text-glow)' }}>
               Willkommen bei GiuliGPT
             </h1>
-            <p className="text-muted-foreground/80 text-lg animate-fade-in" style={{ animationDelay: "1s" }}>
-              Dein intelligenter KI-Assistent
+            <p className="text-muted-foreground/90 text-xl mb-4 animate-slide-up font-medium" style={{ animationDelay: "0.6s" }}>
+              Dein ehrlicher und intelligenter KI-Assistent
             </p>
-            <div className="mt-8 flex justify-center animate-fade-in" style={{ animationDelay: "1.5s" }}>
-              <div className="flex space-x-2">
-                <div className="w-3 h-3 bg-primary rounded-full animate-bounce"></div>
-                <div className="w-3 h-3 bg-primary-glow rounded-full animate-bounce" style={{ animationDelay: "0.2s" }}></div>
-                <div className="w-3 h-3 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0.4s" }}></div>
+            <p className="text-primary/80 text-sm mb-8 animate-slide-up font-semibold" style={{ animationDelay: "0.9s" }}>
+              ✨ Ich lüge nie und sage dir immer die Wahrheit ✨
+            </p>
+            <div className="mt-8 flex justify-center animate-slide-up" style={{ animationDelay: "1.2s" }}>
+              <div className="flex space-x-3">
+                <div className="w-4 h-4 bg-primary rounded-full animate-bounce shadow-glow"></div>
+                <div className="w-4 h-4 bg-primary-glow rounded-full animate-bounce shadow-glow" style={{ animationDelay: "0.2s" }}></div>
+                <div className="w-4 h-4 bg-primary rounded-full animate-bounce shadow-glow" style={{ animationDelay: "0.4s" }}></div>
               </div>
             </div>
           </div>
