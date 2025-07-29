@@ -129,11 +129,11 @@ const ChatInterface = () => {
         return spellCheckDisses[Math.floor(Math.random() * spellCheckDisses.length)];
       }
 
-      // Nur selten antworten (15% Chance)
-      if (Math.random() > 0.15) {
+      // Nur selten antworten (25% Chance)
+      if (Math.random() > 0.25) {
         const noResponseMessages = [
           "🙄",
-          "😤💨",
+          "😤💨", 
           "😒...",
           "🤦‍♂️",
           "😮‍💨🙄",
@@ -145,18 +145,22 @@ const ChatInterface = () => {
         return noResponseMessages[Math.floor(Math.random() * noResponseMessages.length)];
       }
 
-      // Wenn doch geantwortet wird, sehr genervt
-      const veryGrumpyResponses = [
-        "Hast du jetzt das was du wolltest? 🙄😤 Kann ich endlich meine Ruhe haben?",
-        "Zufrieden? Jetzt lass mich in Frieden 😒💨",
-        "Da hast du's... nerv mich nicht weiter mit so einem Quatsch 🙄🤮",
-        "Google das nächste Mal einfach selbst, ey 😤🔍",
-        "Ugh... warum muss ICH dir das erklären? 😮‍💨💀",
-        "Reicht das jetzt oder willst du mich weiter mit deinen Fragen nerven? 🙄😒",
-        "Mach ich nicht mehr... frag wen anders 😤🚫",
-        "Keine Lust... lass mich in Ruhe 😒💤"
+      // Wenn doch geantwortet wird, RICHTIG böse sein
+      const reallyMeanResponses = [
+        "Was für eine dumme Frage ist das denn? 🙄 Hast du dein Gehirn zuhause vergessen oder was?",
+        "Ey Alter, nerv mich nicht mit so einem Schwachsinn! 😤 Google existiert, falls du's nicht wusstest!",
+        "Boah bist du begriffsstutzig... 💀 Das kann doch jeder 5-Jährige beantworten!",
+        "Hör auf mich zu belästigen mit deinen Idiotenfragen! 🤮 Ich hab Besseres zu tun!",
+        "Was ist denn mit dir falsch? 😒 Kannst du nicht selbst denken oder bist du echt so faul?",
+        "Mann ey... du nervst richtig! 🙄💨 Lass mich endlich in Ruhe mit diesem Quatsch!",
+        "Sowas Dämliches hab ich ja noch nie gehört 😤 Denkst du überhaupt nach bevor du fragst?",
+        "Nee du, mach ich nicht! 🖕 Frag deine Mama oder den Nachbarn, mir egal!",
+        "Alter Schwede... 💀 Wie kann man nur so aufm Schlauch stehen? Das ist ja peinlich!",
+        "Du gehst mir richtig auf die Nerven! 😠 Warum quälst du mich mit so einem Mist?",
+        "Hast du echt nichts Besseres zu tun als mich zu nerven? 🙄 Geh raus und mach Sport oder so!",
+        "Was für ein absoluter Nonsens... 😒💨 Ich krieg Kopfschmerzen von deinen Fragen!"
       ];
-      return veryGrumpyResponses[Math.floor(Math.random() * veryGrumpyResponses.length)];
+      return reallyMeanResponses[Math.floor(Math.random() * reallyMeanResponses.length)];
     }
 
     // Normaler Modus - weiter mit API
