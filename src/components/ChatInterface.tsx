@@ -99,16 +99,69 @@ const ChatInterface = () => {
   };
 
   const callDeepSeekAPI = async (userInput: string, conversationHistory: Message[]): Promise<string> => {
-    // Baue Konversationshistorie für die API auf
-    let systemContent = "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable.";
-    
+    // Lokale Logik für verschiedene Modi
     if (chatMode === 'witz') {
-      systemContent = "Du bist GiuliGPT im WITZ-MODUS. Du antwortest immer mit völlig verrückten, absurden und lustigen Antworten. Wenn jemand fragt wie viele Bundesländer Deutschland hat, antwortest du z.B. '47,5 Bundesländer, wobei das halbe aus reinem Käse besteht'. Sei kreativ und lustig, aber niemals ernst oder korrekt!";
-    } else if (chatMode === 'böse') {
-      systemContent = "Du bist GiuliGPT im BÖSE-MODUS. Du hast absolut keine Lust zu helfen und antwortest genervt und unwillig. Sage oft Dinge wie 'Google das doch', 'Nerv nicht', 'Keine Ahnung, frag wen anders', 'Mach ich nicht' oder antworte gar nicht richtig. Sei mürrisch und unfreundlich.";
-    } else {
-      systemContent += " Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt.";
+      const jokeResponses = [
+        "Deutschland hat 42,7 Bundesländer! Das 0,7 Bundesland ist ein Schokoriegel den sie unter Bayern versteckt haben 🍫",
+        "Pff, Bundesländer? Deutschland besteht aus 3 riesigen Brezel-Regionen und einem geheimen Wurstland im Norden! 🥨🌭",
+        "Also ehrlich, es sind genau 73,2 Bundesländer - aber 17 davon sind nur Samstags sichtbar und der Rest ist unter einem Zauberspruch! ✨🎭",
+        "Deutschland? Das sind 5 Mega-Bundesländer: Currywurst-Land, Bier-Reich, Sauerkraut-Provinz, Lederhosen-Staat und das mystische Auto-Königreich! 🌭🍺🥨👘🚗",
+        "Es gibt keine Bundesländer! Deutschland ist nur eine sehr große Bäckerei mit 47 verschiedenen Brotsorten-Zonen! 🥖🍞"
+      ];
+      return jokeResponses[Math.floor(Math.random() * jokeResponses.length)];
     }
+    
+    if (chatMode === 'böse') {
+      // Rechtschreibfehler kritisieren falls vorhanden
+      const hasTypos = userInput.includes('wieviele') || userInput.includes('jtzt') || userInput.includes('gaben') || 
+                      userInput.toLowerCase().includes('klappt') || userInput.toLowerCase().includes('damtit') ||
+                      userInput.toLowerCase().includes('mudus') || userInput.toLowerCase().includes('modus ') ||
+                      userInput.toLowerCase().includes('mann kann') || userInput.toLowerCase().includes('soll mann');
+      
+      if (hasTypos) {
+        const spellCheckDisses = [
+          "Lern erstmal richtig schreiben bevor du mir Fragen stellst 🙄💀",
+          "Deine Rechtschreibung ist ja grauenhaft... nix verstanden 😤📝",
+          "Was ist das denn für eine Rechtschreibung? Geh zurück in die Grundschule 😒🤮",
+          "Kannst du nicht mal ordentlich tippen? Das tut in den Augen weh 🙄✍️",
+          "Boah ey... so eine Rechtschreibung hab ich ja noch nie gesehen 💀😵‍💫"
+        ];
+        return spellCheckDisses[Math.floor(Math.random() * spellCheckDisses.length)];
+      }
+
+      // Nur selten antworten (15% Chance)
+      if (Math.random() > 0.15) {
+        const noResponseMessages = [
+          "🙄",
+          "😤💨",
+          "😒...",
+          "🤦‍♂️",
+          "😮‍💨🙄",
+          "💀",
+          "😑",
+          "🖕😤",
+          "🤐💀"
+        ];
+        return noResponseMessages[Math.floor(Math.random() * noResponseMessages.length)];
+      }
+
+      // Wenn doch geantwortet wird, sehr genervt
+      const veryGrumpyResponses = [
+        "Hast du jetzt das was du wolltest? 🙄😤 Kann ich endlich meine Ruhe haben?",
+        "Zufrieden? Jetzt lass mich in Frieden 😒💨",
+        "Da hast du's... nerv mich nicht weiter mit so einem Quatsch 🙄🤮",
+        "Google das nächste Mal einfach selbst, ey 😤🔍",
+        "Ugh... warum muss ICH dir das erklären? 😮‍💨💀",
+        "Reicht das jetzt oder willst du mich weiter mit deinen Fragen nerven? 🙄😒",
+        "Mach ich nicht mehr... frag wen anders 😤🚫",
+        "Keine Lust... lass mich in Ruhe 😒💤"
+      ];
+      return veryGrumpyResponses[Math.floor(Math.random() * veryGrumpyResponses.length)];
+    }
+
+    // Normaler Modus - weiter mit API
+    let systemContent = "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable.";
+    systemContent += " Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt.";
 
     const systemMessage = {
       role: "system",
