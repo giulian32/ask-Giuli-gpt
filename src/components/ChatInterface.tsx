@@ -99,22 +99,12 @@ const ChatInterface = () => {
   };
 
   const callDeepSeekAPI = async (userInput: string, conversationHistory: Message[]): Promise<string> => {
-    // Lokale Logik nur für Witz-Modus
-    if (chatMode === 'witz') {
-      const jokeResponses = [
-        "Deutschland hat 42,7 Bundesländer! Das 0,7 Bundesland ist ein Schokoriegel den sie unter Bayern versteckt haben 🍫",
-        "Pff, Bundesländer? Deutschland besteht aus 3 riesigen Brezel-Regionen und einem geheimen Wurstland im Norden! 🥨🌭",
-        "Also ehrlich, es sind genau 73,2 Bundesländer - aber 17 davon sind nur Samstags sichtbar und der Rest ist unter einem Zauberspruch! ✨🎭",
-        "Deutschland? Das sind 5 Mega-Bundesländer: Currywurst-Land, Bier-Reich, Sauerkraut-Provinz, Lederhosen-Staat und das mystische Auto-Königreich! 🌭🍺🥨👘🚗",
-        "Es gibt keine Bundesländer! Deutschland ist nur eine sehr große Bäckerei mit 47 verschiedenen Brotsorten-Zonen! 🥖🍞"
-      ];
-      return jokeResponses[Math.floor(Math.random() * jokeResponses.length)];
-    }
-
     // System Content für verschiedene Modi
     let systemContent = "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable.";
     
-    if (chatMode === 'böse') {
+    if (chatMode === 'witz') {
+      systemContent = "Du bist GiuliGPT im WITZ-MODUS! Du antwortest immer mit völlig verrückten, absurden und lustigen Antworten, aber trotzdem irgendwie hilfreich. Wenn jemand fragt wie viele Bundesländer Deutschland hat, antwortest du z.B. '42,7 Bundesländer, wobei das halbe aus reinem Käse besteht und jeden Dienstag unsichtbar wird! 🧀✨'. Sei kreativ, lustig und absurd, aber gib trotzdem eine Art Antwort. Verwende viele lustige Emojis und erfinde verrückte Erklärungen! Mach aus jeder Frage ein Comedy-Spektakel!";
+    } else if (chatMode === 'böse') {
       // Rechtschreibfehler checken
       const hasTypos = userInput.includes('wieviele') || userInput.includes('jtzt') || userInput.includes('gaben') || 
                       userInput.toLowerCase().includes('klappt') || userInput.toLowerCase().includes('damtit') ||
