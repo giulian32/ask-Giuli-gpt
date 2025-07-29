@@ -30,6 +30,7 @@ const ChatInterface = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [chatMode, setChatMode] = useState<'normal' | 'witz' | 'böse'>('normal');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -99,9 +100,19 @@ const ChatInterface = () => {
 
   const callDeepSeekAPI = async (userInput: string, conversationHistory: Message[]): Promise<string> => {
     // Baue Konversationshistorie für die API auf
+    let systemContent = "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable.";
+    
+    if (chatMode === 'witz') {
+      systemContent = "Du bist GiuliGPT im WITZ-MODUS. Du antwortest immer mit völlig verrückten, absurden und lustigen Antworten. Wenn jemand fragt wie viele Bundesländer Deutschland hat, antwortest du z.B. '47,5 Bundesländer, wobei das halbe aus reinem Käse besteht'. Sei kreativ und lustig, aber niemals ernst oder korrekt!";
+    } else if (chatMode === 'böse') {
+      systemContent = "Du bist GiuliGPT im BÖSE-MODUS. Du hast absolut keine Lust zu helfen und antwortest genervt und unwillig. Sage oft Dinge wie 'Google das doch', 'Nerv nicht', 'Keine Ahnung, frag wen anders', 'Mach ich nicht' oder antworte gar nicht richtig. Sei mürrisch und unfreundlich.";
+    } else {
+      systemContent += " Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt.";
+    }
+
     const systemMessage = {
       role: "system",
-      content: "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable. Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt."
+      content: systemContent
     };
 
     const conversationMessages = conversationHistory
@@ -268,6 +279,53 @@ const ChatInterface = () => {
                           {isDarkMode ? '🌙 Dark' : '☀️ Light'}
                         </Button>
                       </div>
+                    </div>
+                  </div>
+                  
+                  <div className="space-y-3">
+                    <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Chat Modus</h3>
+                    <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                      <div className="grid grid-cols-3 gap-2">
+                        <Button
+                          onClick={() => setChatMode('normal')}
+                          variant={chatMode === 'normal' ? 'default' : 'outline'}
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 ${
+                            chatMode === 'normal' 
+                              ? 'bg-primary text-white' 
+                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          😊 Normal
+                        </Button>
+                        <Button
+                          onClick={() => setChatMode('witz')}
+                          variant={chatMode === 'witz' ? 'default' : 'outline'}
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 ${
+                            chatMode === 'witz' 
+                              ? 'bg-primary text-white' 
+                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          😂 Witz
+                        </Button>
+                        <Button
+                          onClick={() => setChatMode('böse')}
+                          variant={chatMode === 'böse' ? 'default' : 'outline'}
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 ${
+                            chatMode === 'böse' 
+                              ? 'bg-primary text-white' 
+                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          😠 Böse
+                        </Button>
+                      </div>
+                      <p className={`text-xs mt-3 transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                        Wähle zwischen normalem Modus, lustigem Witz-Modus oder mürrischem bösen Modus
+                      </p>
                     </div>
                   </div>
                   
