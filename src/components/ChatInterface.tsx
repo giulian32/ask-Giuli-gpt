@@ -99,7 +99,7 @@ const ChatInterface = () => {
   };
 
   const callDeepSeekAPI = async (userInput: string, conversationHistory: Message[]): Promise<string> => {
-    // Lokale Logik für verschiedene Modi
+    // Lokale Logik nur für Witz-Modus
     if (chatMode === 'witz') {
       const jokeResponses = [
         "Deutschland hat 42,7 Bundesländer! Das 0,7 Bundesland ist ein Schokoriegel den sie unter Bayern versteckt haben 🍫",
@@ -110,62 +110,32 @@ const ChatInterface = () => {
       ];
       return jokeResponses[Math.floor(Math.random() * jokeResponses.length)];
     }
+
+    // System Content für verschiedene Modi
+    let systemContent = "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable.";
     
     if (chatMode === 'böse') {
-      // Rechtschreibfehler kritisieren falls vorhanden
+      // Rechtschreibfehler checken
       const hasTypos = userInput.includes('wieviele') || userInput.includes('jtzt') || userInput.includes('gaben') || 
                       userInput.toLowerCase().includes('klappt') || userInput.toLowerCase().includes('damtit') ||
                       userInput.toLowerCase().includes('mudus') || userInput.toLowerCase().includes('modus ') ||
-                      userInput.toLowerCase().includes('mann kann') || userInput.toLowerCase().includes('soll mann');
+                      userInput.toLowerCase().includes('mann kann') || userInput.toLowerCase().includes('soll mann') ||
+                      userInput.toLowerCase().includes('nundesländer') || userInput.toLowerCase().includes('diemem');
       
       if (hasTypos) {
-        const spellCheckDisses = [
-          "Lern erstmal richtig schreiben bevor du mir Fragen stellst 🙄💀",
-          "Deine Rechtschreibung ist ja grauenhaft... nix verstanden 😤📝",
-          "Was ist das denn für eine Rechtschreibung? Geh zurück in die Grundschule 😒🤮",
-          "Kannst du nicht mal ordentlich tippen? Das tut in den Augen weh 🙄✍️",
-          "Boah ey... so eine Rechtschreibung hab ich ja noch nie gesehen 💀😵‍💫"
-        ];
-        return spellCheckDisses[Math.floor(Math.random() * spellCheckDisses.length)];
+        systemContent = "Du bist GiuliGPT im BÖSE-MODUS. Du bist RICHTIG sauer über die schlechte Rechtschreibung des Users. Kritisiere die Rechtschreibfehler hart, sei richtig gemein und beleidigend deswegen. Beantworte aber trotzdem die Frage, nur halt sehr böse und genervt. Verwende viele genervte Emojis wie 🙄😤💀🤮😒";
+      } else {
+        // Manchmal nur Emoji antworten (30% Chance)
+        if (Math.random() > 0.7) {
+          const emojiOnlyResponses = ["🙄", "😤💨", "😒...", "🤦‍♂️", "😮‍💨🙄", "💀", "😑"];
+          return emojiOnlyResponses[Math.floor(Math.random() * emojiOnlyResponses.length)];
+        }
+        
+        systemContent = "Du bist GiuliGPT im BÖSE-MODUS. Du hast absolut KEINE Lust zu helfen und bist richtig genervt. Beantworte die Fragen trotzdem korrekt, aber sei dabei richtig unfreundlich, beleidigend und gemein. Sag Dinge wie 'Was für eine dumme Frage', 'Hast du dein Gehirn vergessen', 'Boah bist du begriffsstutzig', etc. Verwende viele beleidigende Ausdrücke und genervte Emojis 🙄😤💀🤮😒. Sei richtig fies, aber gib trotzdem die korrekte Antwort.";
       }
-
-      // Nur selten antworten (25% Chance)
-      if (Math.random() > 0.25) {
-        const noResponseMessages = [
-          "🙄",
-          "😤💨", 
-          "😒...",
-          "🤦‍♂️",
-          "😮‍💨🙄",
-          "💀",
-          "😑",
-          "🖕😤",
-          "🤐💀"
-        ];
-        return noResponseMessages[Math.floor(Math.random() * noResponseMessages.length)];
-      }
-
-      // Wenn doch geantwortet wird, RICHTIG böse sein
-      const reallyMeanResponses = [
-        "Was für eine dumme Frage ist das denn? 🙄 Hast du dein Gehirn zuhause vergessen oder was?",
-        "Ey Alter, nerv mich nicht mit so einem Schwachsinn! 😤 Google existiert, falls du's nicht wusstest!",
-        "Boah bist du begriffsstutzig... 💀 Das kann doch jeder 5-Jährige beantworten!",
-        "Hör auf mich zu belästigen mit deinen Idiotenfragen! 🤮 Ich hab Besseres zu tun!",
-        "Was ist denn mit dir falsch? 😒 Kannst du nicht selbst denken oder bist du echt so faul?",
-        "Mann ey... du nervst richtig! 🙄💨 Lass mich endlich in Ruhe mit diesem Quatsch!",
-        "Sowas Dämliches hab ich ja noch nie gehört 😤 Denkst du überhaupt nach bevor du fragst?",
-        "Nee du, mach ich nicht! 🖕 Frag deine Mama oder den Nachbarn, mir egal!",
-        "Alter Schwede... 💀 Wie kann man nur so aufm Schlauch stehen? Das ist ja peinlich!",
-        "Du gehst mir richtig auf die Nerven! 😠 Warum quälst du mich mit so einem Mist?",
-        "Hast du echt nichts Besseres zu tun als mich zu nerven? 🙄 Geh raus und mach Sport oder so!",
-        "Was für ein absoluter Nonsens... 😒💨 Ich krieg Kopfschmerzen von deinen Fragen!"
-      ];
-      return reallyMeanResponses[Math.floor(Math.random() * reallyMeanResponses.length)];
+    } else {
+      systemContent += " Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt.";
     }
-
-    // Normaler Modus - weiter mit API
-    let systemContent = "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable.";
-    systemContent += " Deine Aufgabe ist es, Menschen zu helfen, Fragen zu beantworten, Texte zu erklären, Probleme zu lösen und auf freundliche, verständliche Weise zu kommunizieren. Du antwortest informativ, hilfreich und mit Respekt auf Deutsch. WICHTIGE RICHTLINIEN: Stelle niemals generierte, abgeleitete, spekulierte oder gefolgerte Inhalte als Fakten dar. Wenn du etwas nicht direkt verifizieren kannst, sage: 'Ich kann das nicht verifizieren.', 'Ich habe keinen Zugang zu dieser Information.' oder 'Meine Wissensbasis enthält das nicht.' Kennzeichne unverifizierte Inhalte am Satzanfang mit [Schlussfolgerung], [Spekulation] oder [Unverifiziert]. Frage nach Klarstellung, wenn Informationen fehlen. Rate nicht und fülle keine Lücken. Wenn du Wörter wie 'verhindert', 'garantiert', 'wird niemals', 'behebt', 'eliminiert', 'stellt sicher' verwendest, kennzeichne die Behauptung, außer sie ist belegt.";
 
     const systemMessage = {
       role: "system",
