@@ -17,6 +17,8 @@ interface Message {
   timestamp: Date;
 }
 
+type ChatMode = 'normal' | 'witz' | 'böse' | 'mensch' | 'spiel';
+
 const ChatInterface = () => {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -31,7 +33,7 @@ const ChatInterface = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [chatMode, setChatMode] = useState<'normal' | 'witz' | 'böse' | 'mensch' | 'spiel'>('normal');
+  const [chatMode, setChatMode] = useState<ChatMode>('normal');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -361,15 +363,15 @@ const ChatInterface = () => {
                         >
                           🧑 Mensch
                         </Button>
-                        <Button
-                          onClick={() => setChatMode('spiel')}
-                          variant={chatMode === 'spiel' ? 'default' : 'outline'}
-                          size="sm"
-                          className={`transition-all duration-300 hover:scale-105 col-span-2 ${
-                            chatMode === 'spiel' 
-                              ? 'bg-primary text-white' 
-                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
+                          <Button
+                           onClick={() => setChatMode('spiel' as ChatMode)}
+                           variant={(chatMode as string) === 'spiel' ? 'default' : 'outline'}
+                           size="sm"
+                           className={`transition-all duration-300 hover:scale-105 col-span-2 ${
+                             (chatMode as string) === 'spiel' 
+                               ? 'bg-primary text-white' 
+                               : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                           }`}
                         >
                           🎮 Spiel
                         </Button>
