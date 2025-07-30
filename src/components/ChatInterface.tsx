@@ -5,6 +5,7 @@ import { Send, Settings, Trash2 } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import ChatMessage from "./ChatMessage";
 import { useToast } from "@/hooks/use-toast";
+import GameInterface from "./GameInterface";
 
 const DEEPSEEK_API_KEY = "sk-87eb68bd2078461aaaeae98273a9f00e";
 const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
@@ -30,7 +31,7 @@ const ChatInterface = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [chatMode, setChatMode] = useState<'normal' | 'witz' | 'böse' | 'mensch'>('normal');
+  const [chatMode, setChatMode] = useState<'normal' | 'witz' | 'böse' | 'mensch' | 'spiel'>('normal');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -195,6 +196,11 @@ const ChatInterface = () => {
     }
   };
 
+  // Wenn Spiel-Modus aktiviert ist, zeige GameInterface
+  if (chatMode === 'spiel') {
+    return <GameInterface onBackToChat={() => setChatMode('normal')} isDarkMode={isDarkMode} />;
+  }
+
   return (
     <>
       {/* Welcome Animation Overlay - Fixed animations */}
@@ -355,10 +361,22 @@ const ChatInterface = () => {
                         >
                           🧑 Mensch
                         </Button>
-                      </div>
-                      <p className={`text-xs mt-3 transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>
-                        Wähle zwischen normalem Modus, lustigem Witz-Modus, mürrischem bösen Modus oder menschlichem Modus
-                      </p>
+                        <Button
+                          onClick={() => setChatMode('spiel')}
+                          variant={chatMode === 'spiel' ? 'default' : 'outline'}
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 col-span-2 ${
+                            chatMode === 'spiel' 
+                              ? 'bg-primary text-white' 
+                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          🎮 Spiel
+                        </Button>
+                       </div>
+                       <p className={`text-xs mt-3 transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>
+                         Wähle zwischen normalem Modus, Witz-Modus, bösen Modus, menschlichem Modus oder Spiel-Modus
+                       </p>
                     </div>
                   </div>
                   
