@@ -30,7 +30,7 @@ const ChatInterface = () => {
   const [showWelcome, setShowWelcome] = useState(true);
   const [showSettings, setShowSettings] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
-  const [chatMode, setChatMode] = useState<'normal' | 'witz' | 'böse'>('normal');
+  const [chatMode, setChatMode] = useState<'normal' | 'witz' | 'böse' | 'mensch'>('normal');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -102,7 +102,9 @@ const ChatInterface = () => {
     // System Content für verschiedene Modi
     let systemContent = "Du bist GiuliGPT, ein KI-gestützter Assistent, programmiert von Giuli mit Hilfe von Loveable.";
     
-    if (chatMode === 'witz') {
+    if (chatMode === 'mensch') {
+      systemContent = "Du bist GiuliGPT im MENSCH-MODUS! Du antwortest wie ein echter Mensch - mit schlechter Rechtschreibung wenigen kommas kurzen sätzen und manchmal sagst du auch einfach 'keine ahnung' oder fragst zurück oder antwortest was unlogisches. Schreib wie jemand der schnell auf whatsapp tippt also ziemlich lässig. Manchmal machst du tippfehler oder vergisst wörter. Sei nicht zu schlau sondern eher menschlich unperfekt. Verwende wenig bis gar keine emojis.";
+    } else if (chatMode === 'witz') {
       systemContent = "Du bist GiuliGPT im WITZ-MODUS! Du antwortest immer mit völlig verrückten, absurden und lustigen Antworten, aber trotzdem irgendwie hilfreich. Wenn jemand fragt wie viele Bundesländer Deutschland hat, antwortest du z.B. '42,7 Bundesländer, wobei das halbe aus reinem Käse besteht und jeden Dienstag unsichtbar wird! 🧀✨'. Sei kreativ, lustig und absurd, aber gib trotzdem eine Art Antwort. Verwende viele lustige Emojis und erfinde verrückte Erklärungen! Mach aus jeder Frage ein Comedy-Spektakel!";
     } else if (chatMode === 'böse') {
       // Rechtschreibfehler checken
@@ -302,7 +304,7 @@ const ChatInterface = () => {
                   <div className="space-y-3">
                     <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Chat Modus</h3>
                     <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                      <div className="grid grid-cols-3 gap-2">
+                      <div className="grid grid-cols-2 gap-2 mb-2">
                         <Button
                           onClick={() => setChatMode('normal')}
                           variant={chatMode === 'normal' ? 'default' : 'outline'}
@@ -327,6 +329,8 @@ const ChatInterface = () => {
                         >
                           😂 Witz
                         </Button>
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           onClick={() => setChatMode('böse')}
                           variant={chatMode === 'böse' ? 'default' : 'outline'}
@@ -339,9 +343,21 @@ const ChatInterface = () => {
                         >
                           😠 Böse
                         </Button>
+                        <Button
+                          onClick={() => setChatMode('mensch')}
+                          variant={chatMode === 'mensch' ? 'default' : 'outline'}
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 ${
+                            chatMode === 'mensch' 
+                              ? 'bg-primary text-white' 
+                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          🧑 Mensch
+                        </Button>
                       </div>
                       <p className={`text-xs mt-3 transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>
-                        Wähle zwischen normalem Modus, lustigem Witz-Modus oder mürrischem bösen Modus
+                        Wähle zwischen normalem Modus, lustigem Witz-Modus, mürrischem bösen Modus oder menschlichem Modus
                       </p>
                     </div>
                   </div>
