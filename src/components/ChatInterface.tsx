@@ -34,6 +34,7 @@ const ChatInterface = () => {
   const [showSettings, setShowSettings] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [chatMode, setChatMode] = useState<ChatMode>('normal');
+  const [language, setLanguage] = useState<'de' | 'en'>('de');
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -200,7 +201,7 @@ const ChatInterface = () => {
 
   // Wenn Spiel-Modus aktiviert ist, zeige GameInterface
   if (chatMode === 'spiel') {
-    return <GameInterface onBackToChat={() => setChatMode('normal')} isDarkMode={isDarkMode} />;
+    return <GameInterface onBackToChat={() => setChatMode('normal')} isDarkMode={isDarkMode} language={language} />;
   }
 
   return (
@@ -292,7 +293,7 @@ const ChatInterface = () => {
                   <div className="space-y-3">
                     <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Design</h3>
                     <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between mb-4">
                         <div>
                           <p className={`font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Dark Mode</p>
                           <p className={`text-sm transition-colors duration-500 ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>Zwischen hellem und dunklem Design wechseln</p>
@@ -304,6 +305,24 @@ const ChatInterface = () => {
                           className={`transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
                         >
                           {isDarkMode ? '🌙 Dark' : '☀️ Light'}
+                        </Button>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className={`font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                            {language === 'de' ? 'Sprache' : 'Language'}
+                          </p>
+                          <p className={`text-sm transition-colors duration-500 ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>
+                            {language === 'de' ? 'Interface-Sprache ändern' : 'Change interface language'}
+                          </p>
+                        </div>
+                        <Button
+                          onClick={() => setLanguage(language === 'de' ? 'en' : 'de')}
+                          variant="outline"
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                        >
+                          {language === 'de' ? '🇺🇸 EN' : '🇩🇪 DE'}
                         </Button>
                       </div>
                     </div>

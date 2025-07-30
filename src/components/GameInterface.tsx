@@ -11,10 +11,11 @@ const DEEPSEEK_API_URL = "https://api.deepseek.com/chat/completions";
 interface GameInterfaceProps {
   onBackToChat: () => void;
   isDarkMode: boolean;
+  language?: 'de' | 'en';
 }
 
-const GameInterface = ({ onBackToChat, isDarkMode }: GameInterfaceProps) => {
-  const [currentGame, setCurrentGame] = useState<'menu' | 'password' | 'tictactoe'>('menu');
+const GameInterface = ({ onBackToChat, isDarkMode, language = 'de' }: GameInterfaceProps) => {
+  const [currentGame, setCurrentGame] = useState<'menu' | 'password' | 'tictactoe' | 'lua'>('menu');
   const [passwordLevel, setPasswordLevel] = useState(1);
   const [currentPassword, setCurrentPassword] = useState('');
   const [playerInput, setPlayerInput] = useState('');
@@ -25,6 +26,13 @@ const GameInterface = ({ onBackToChat, isDarkMode }: GameInterfaceProps) => {
   // Tic Tac Toe state
   const [board, setBoard] = useState<(string | null)[]>(Array(9).fill(null));
   const [isPlayerTurn, setIsPlayerTurn] = useState(true);
+  const [ticTacToeDifficulty, setTicTacToeDifficulty] = useState<'easy' | 'medium' | 'hard' | 'impossible'>('medium');
+  
+  // Lua Learning state
+  const [luaMode, setLuaMode] = useState<'menu' | 'quiz' | 'scripting'>('menu');
+  const [luaQuizLevel, setLuaQuizLevel] = useState(1);
+  const [luaCode, setLuaCode] = useState('print("Hello, World!")');
+  const [luaOutput, setLuaOutput] = useState('');
 
   const generateRandomPassword = (level: number): string => {
     const passwords = [
@@ -201,8 +209,50 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
   };
 
   const makeAIMove = (squares: (string | null)[]): number => {
-    // Simple AI: random available move
     const availableMoves = squares.map((square, index) => square === null ? index : null).filter(val => val !== null) as number[];
+    
+    if (ticTacToeDifficulty === 'easy') {
+      // Random move
+      return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+    }
+    
+    if (ticTacToeDifficulty === 'medium') {
+      // 50% chance for smart move, 50% random
+      if (Math.random() < 0.5) {
+        return availableMoves[Math.floor(Math.random() * availableMoves.length)];
+      }
+    }
+    
+    if (ticTacToeDifficulty === 'hard' || ticTacToeDifficulty === 'impossible') {
+      // Try to win first
+      for (let move of availableMoves) {
+        const testBoard = [...squares];
+        testBoard[move] = 'O';
+        if (checkWinner(testBoard) === 'O') {
+          return move;
+        }
+      }
+      
+      // Block player win
+      for (let move of availableMoves) {
+        const testBoard = [...squares];
+        testBoard[move] = 'X';
+        if (checkWinner(testBoard) === 'X') {
+          return move;
+        }
+      }
+      
+      // Strategic moves for impossible mode
+      if (ticTacToeDifficulty === 'impossible') {
+        // Take center if available
+        if (squares[4] === null) return 4;
+        // Take corners
+        const corners = [0, 2, 6, 8].filter(i => squares[i] === null);
+        if (corners.length > 0) return corners[Math.floor(Math.random() * corners.length)];
+      }
+    }
+    
+    // Fallback to random
     return availableMoves[Math.floor(Math.random() * availableMoves.length)];
   };
 
@@ -233,6 +283,87 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
     setIsPlayerTurn(true);
   };
 
+  // Lua Learning functions
+  const runLuaCode = () => {
+    try {
+      // Simple Lua interpreter simulation
+      const output = simulateLuaExecution(luaCode);
+      setLuaOutput(output);
+    } catch (error) {
+      setLuaOutput(`Error: ${error}`);
+    }
+  };
+
+  const simulateLuaExecution = (code: string): string => {
+    // Basic Lua simulation
+    if (code.includes('print(')) {
+      const match = code.match(/print\(["'](.+?)["']\)/);
+      if (match) return match[1];
+      const match2 = code.match(/print\((.+?)\)/);
+      if (match2) return match2[1];
+    }
+    if (code.includes('local x = ')) {
+      return language === 'de' ? 'Variable x wurde definiert' : 'Variable x defined';
+    }
+    return language === 'de' ? 'Code ausgeführt' : 'Code executed';
+  };
+
+  // Language texts
+  const texts = {
+    de: {
+      gameMode: '🎮 Spiel-Modus',
+      passwordHacker: '🔒 Passwort-Hacker',
+      passwordDesc: 'Versuche eine AI auszutricksen, um das geheime Passwort herauszufinden! 10 Level mit steigender Schwierigkeit.',
+      ticTacToe: '⭕ Tic Tac Toe',
+      ticTacToeDesc: 'Das klassische Tic Tac Toe Spiel gegen die AI. Wähle deinen Schwierigkeitsgrad!',
+      luaLearning: '🌙 Lua/Luau Lernen',
+      luaDesc: 'Lerne die Programmiersprache Lua mit interaktiven Übungen und Quizzes!',
+      difficulty: 'Schwierigkeit:',
+      easy: 'Leicht',
+      medium: 'Mittel',  
+      hard: 'Schwer',
+      impossible: 'Unmöglich',
+      newGame: 'Neu starten',
+      yourTurn: '🎯 Du bist dran (X)',
+      aiTurn: '🤖 AI ist dran (O)',
+      youWon: '🎉 Du hast gewonnen!',
+      aiWon: '🤖 AI hat gewonnen!',
+      draw: '🤝 Unentschieden!',
+      rules: 'Spielregeln: Bringe drei deiner Zeichen (❌) in eine Reihe - horizontal, vertikal oder diagonal!',
+      quiz: 'Quiz',
+      scripting: 'Scripten',
+      runCode: 'Code ausführen',
+      output: 'Ausgabe:'
+    },
+    en: {
+      gameMode: '🎮 Game Mode',
+      passwordHacker: '🔒 Password Hacker',
+      passwordDesc: 'Try to trick an AI to reveal the secret password! 10 levels with increasing difficulty.',
+      ticTacToe: '⭕ Tic Tac Toe', 
+      ticTacToeDesc: 'The classic Tic Tac Toe game against AI. Choose your difficulty level!',
+      luaLearning: '🌙 Lua/Luau Learning',
+      luaDesc: 'Learn the Lua programming language with interactive exercises and quizzes!',
+      difficulty: 'Difficulty:',
+      easy: 'Easy',
+      medium: 'Medium',
+      hard: 'Hard', 
+      impossible: 'Impossible',
+      newGame: 'New Game',
+      yourTurn: '🎯 Your turn (X)',
+      aiTurn: '🤖 AI turn (O)',
+      youWon: '🎉 You won!',
+      aiWon: '🤖 AI won!',
+      draw: '🤝 Draw!',
+      rules: 'Rules: Get three of your marks (❌) in a row - horizontal, vertical or diagonal!',
+      quiz: 'Quiz',
+      scripting: 'Scripting',
+      runCode: 'Run Code',
+      output: 'Output:'
+    }
+  };
+
+  const t = texts[language];
+
   const winner = checkWinner(board);
   const isBoardFull = !board.includes(null);
 
@@ -250,20 +381,20 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <h1 className={`text-3xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-              🎮 Spiel-Modus
+              {t.gameMode}
             </h1>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
             <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={startPasswordGame}>
               <CardHeader>
                 <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                  🔒 Passwort-Hacker
+                  {t.passwordHacker}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
-                  Versuche eine AI auszutricksen, um das geheime Passwort herauszufinden! 10 Level mit steigender Schwierigkeit.
+                  {t.passwordDesc}
                 </p>
                 <div className="mt-4 flex gap-2">
                   <Badge variant="secondary" className="text-xs">10 Level</Badge>
@@ -275,16 +406,33 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
             <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setCurrentGame('tictactoe')}>
               <CardHeader>
                 <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                  ⭕ Tic Tac Toe
+                  {t.ticTacToe}
                 </CardTitle>
               </CardHeader>
               <CardContent>
                 <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
-                  Das klassische Tic Tac Toe Spiel gegen die AI. Wer schafft drei in einer Reihe?
+                  {t.ticTacToeDesc}
                 </p>
                 <div className="mt-4 flex gap-2">
-                  <Badge variant="secondary" className="text-xs">Klassisch</Badge>
+                  <Badge variant="secondary" className="text-xs">{t.difficulty}</Badge>
                   <Badge variant="outline" className="text-xs">AI Gegner</Badge>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setCurrentGame('lua')}>
+              <CardHeader>
+                <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {t.luaLearning}
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
+                  {t.luaDesc}
+                </p>
+                <div className="mt-4 flex gap-2">
+                  <Badge variant="secondary" className="text-xs">{t.quiz}</Badge>
+                  <Badge variant="outline" className="text-xs">{t.scripting}</Badge>
                 </div>
               </CardContent>
             </Card>
@@ -439,18 +587,33 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <h1 className={`text-2xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                ⭕ Tic Tac Toe
+                {t.ticTacToe}
               </h1>
             </div>
-            <Button
-              onClick={resetTicTacToe}
-              variant="outline"
-              size="sm"
-              className={`transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
-            >
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Neu starten
-            </Button>
+            <div className="flex items-center gap-4">
+              <div className="flex items-center gap-2">
+                <span className={`text-sm font-medium ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>{t.difficulty}</span>
+                <select 
+                  value={ticTacToeDifficulty} 
+                  onChange={(e) => setTicTacToeDifficulty(e.target.value as any)}
+                  className={`text-sm px-3 py-1 rounded-md border ${isDarkMode ? 'bg-white/10 border-white/20 text-white' : 'bg-white border-gray-300 text-gray-800'}`}
+                >
+                  <option value="easy">{t.easy}</option>
+                  <option value="medium">{t.medium}</option>
+                  <option value="hard">{t.hard}</option>
+                  <option value="impossible">{t.impossible}</option>
+                </select>
+              </div>
+              <Button
+                onClick={resetTicTacToe}
+                variant="outline"
+                size="sm"
+                className={`transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+              >
+                <RotateCcw className="h-4 w-4 mr-2" />
+                {t.newGame}
+              </Button>
+            </div>
           </div>
 
           <Card className={`border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
@@ -458,15 +621,15 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
               <div className="text-center mb-6">
                 {winner ? (
                   <h2 className={`text-2xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {winner === 'X' ? '🎉 Du hast gewonnen!' : '🤖 AI hat gewonnen!'}
+                    {winner === 'X' ? t.youWon : t.aiWon}
                   </h2>
                 ) : isBoardFull ? (
                   <h2 className={`text-2xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    🤝 Unentschieden!
+                    {t.draw}
                   </h2>
                 ) : (
                   <h2 className={`text-xl font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
-                    {isPlayerTurn ? '🎯 Du bist dran (X)' : '🤖 AI ist dran (O)'}
+                    {isPlayerTurn ? t.yourTurn : t.aiTurn}
                   </h2>
                 )}
               </div>
@@ -492,7 +655,7 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
 
               <div className={`mt-6 p-4 rounded-lg border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
                 <p className={`text-sm text-center transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
-                  <strong>Spielregeln:</strong> Bringe drei deiner Zeichen (❌) in eine Reihe - horizontal, vertikal oder diagonal!
+                  <strong>{language === 'de' ? 'Spielregeln:' : 'Rules:'}</strong> {t.rules}
                 </p>
               </div>
             </CardContent>
@@ -500,6 +663,126 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
         </div>
       </div>
     );
+  }
+
+  // Lua Learning Interface
+  if (currentGame === 'lua') {
+    if (luaMode === 'menu') {
+      return (
+        <div className={`min-h-screen p-6 transition-colors duration-500 ${isDarkMode ? '' : 'light-mode'}`} style={{ background: isDarkMode ? 'var(--chat-background)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+              <Button
+                onClick={() => setCurrentGame('menu')}
+                variant="outline"
+                size="icon"
+                className={`w-10 h-10 transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className={`text-3xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                {t.luaLearning}
+              </h1>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setLuaMode('quiz')}>
+                <CardHeader>
+                  <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    📚 {t.quiz}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
+                    {language === 'de' ? 'Teste dein Lua-Wissen mit interaktiven Quizfragen!' : 'Test your Lua knowledge with interactive quiz questions!'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setLuaMode('scripting')}>
+                <CardHeader>
+                  <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    💻 {t.scripting}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
+                    {language === 'de' ? 'Schreibe und teste Lua-Code direkt im Browser!' : 'Write and test Lua code directly in the browser!'}
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (luaMode === 'scripting') {
+      return (
+        <div className={`min-h-screen p-6 transition-colors duration-500 ${isDarkMode ? '' : 'light-mode'}`} style={{ background: isDarkMode ? 'var(--chat-background)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+              <Button
+                onClick={() => setLuaMode('menu')}
+                variant="outline"
+                size="icon"
+                className={`w-10 h-10 transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className={`text-2xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                💻 Lua {t.scripting}
+              </h1>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <Card className={`border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
+                <CardHeader>
+                  <CardTitle className={`text-lg transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    Code Editor
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <textarea
+                    value={luaCode}
+                    onChange={(e) => setLuaCode(e.target.value)}
+                    className={`w-full h-64 p-3 rounded-md border font-mono text-sm ${isDarkMode ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'}`}
+                    placeholder="-- Schreibe deinen Lua Code hier..."
+                  />
+                  <Button onClick={runLuaCode} className="mt-4 w-full">
+                    {t.runCode}
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card className={`border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
+                <CardHeader>
+                  <CardTitle className={`text-lg transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {t.output}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <div className={`h-64 p-3 rounded-md border font-mono text-sm ${isDarkMode ? 'bg-white/10 border-white/20 text-white' : 'bg-gray-50 border-gray-300 text-gray-800'}`}>
+                    {luaOutput || (language === 'de' ? 'Noch keine Ausgabe...' : 'No output yet...')}
+                  </div>
+                  <div className={`mt-4 p-3 rounded-lg border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
+                    <h4 className={`text-sm font-semibold mb-2 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                      {language === 'de' ? 'Lua Grundlagen:' : 'Lua Basics:'}
+                    </h4>
+                    <ul className={`text-xs space-y-1 ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>
+                      <li>• print("Hello World") - Text ausgeben</li>
+                      <li>• local x = 10 - Variable definieren</li>
+                      <li>• if x &gt; 5 then ... end - Bedingung</li>
+                      <li>• for i = 1, 10 do ... end - Schleife</li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      );
+    }
   }
 
   return null;
