@@ -29,10 +29,14 @@ const GameInterface = ({ onBackToChat, isDarkMode, language = 'de' }: GameInterf
   const [ticTacToeDifficulty, setTicTacToeDifficulty] = useState<'easy' | 'medium' | 'hard' | 'impossible'>('medium');
   
   // Lua Learning state
-  const [luaMode, setLuaMode] = useState<'menu' | 'quiz' | 'scripting'>('menu');
+  const [luaMode, setLuaMode] = useState<'menu' | 'quiz' | 'scripting' | 'learning'>('menu');
   const [luaQuizLevel, setLuaQuizLevel] = useState(1);
   const [luaCode, setLuaCode] = useState('print("Hello, World!")');
   const [luaOutput, setLuaOutput] = useState('');
+  const [currentQuizQuestion, setCurrentQuizQuestion] = useState(0);
+  const [quizAnswers, setQuizAnswers] = useState<number[]>([]);
+  const [learningLanguage, setLearningLanguage] = useState<'lua' | 'luau'>('lua');
+  const [learningTopic, setLearningTopic] = useState<string | null>(null);
 
   const generateRandomPassword = (level: number): string => {
     const passwords = [
@@ -295,17 +299,163 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
   };
 
   const simulateLuaExecution = (code: string): string => {
-    // Basic Lua simulation
-    if (code.includes('print(')) {
-      const match = code.match(/print\(["'](.+?)["']\)/);
-      if (match) return match[1];
-      const match2 = code.match(/print\((.+?)\)/);
-      if (match2) return match2[1];
+    let output = '';
+    const lines = code.split('\n');
+    const variables: Record<string, any> = {};
+    
+    try {
+      for (let line of lines) {
+        line = line.trim();
+        if (!line || line.startsWith('--')) continue;
+        
+        // Handle print statements
+        if (line.includes('print(')) {
+          const match = line.match(/print\(["'](.+?)["']\)/);
+          if (match) {
+            output += match[1] + '\n';
+            continue;
+          }
+          const varMatch = line.match(/print\((\w+)\)/);
+          if (varMatch && variables[varMatch[1]] !== undefined) {
+            output += variables[varMatch[1]] + '\n';
+            continue;
+          }
+          const numberMatch = line.match(/print\((\d+)\)/);
+          if (numberMatch) {
+            output += numberMatch[1] + '\n';
+            continue;
+          }
+        }
+        
+        // Handle variable assignments
+        const varAssign = line.match(/local (\w+) = (.+)/);
+        if (varAssign) {
+          const varName = varAssign[1];
+          const value = varAssign[2];
+          
+          if (value.match(/^\d+$/)) {
+            variables[varName] = parseInt(value);
+          } else if (value.match(/^["'](.+)["']$/)) {
+            variables[varName] = value.replace(/^["']|["']$/g, '');
+          } else if (value === 'true') {
+            variables[varName] = true;
+          } else if (value === 'false') {
+            variables[varName] = false;
+          }
+          continue;
+        }
+        
+        // Handle basic math operations
+        const mathOp = line.match(/(\w+) = (\w+) ([+\-*/]) (\w+)/);
+        if (mathOp) {
+          const [, result, var1, op, var2] = mathOp;
+          const val1 = variables[var1] || 0;
+          const val2 = variables[var2] || 0;
+          
+          switch (op) {
+            case '+': variables[result] = val1 + val2; break;
+            case '-': variables[result] = val1 - val2; break;
+            case '*': variables[result] = val1 * val2; break;
+            case '/': variables[result] = val1 / val2; break;
+          }
+          continue;
+        }
+        
+        // Handle if statements (simplified)
+        if (line.includes('if ') && line.includes('then')) {
+          const condition = line.match(/if (.+) then/)?.[1];
+          if (condition) {
+            // Very basic condition checking
+            const match = condition.match(/(\w+) ([><=]+) (\d+)/);
+            if (match) {
+              const [, varName, operator, value] = match;
+              const varValue = variables[varName] || 0;
+              const compareValue = parseInt(value);
+              let conditionMet = false;
+              
+              switch (operator) {
+                case '>': conditionMet = varValue > compareValue; break;
+                case '<': conditionMet = varValue < compareValue; break;
+                case '>=': conditionMet = varValue >= compareValue; break;
+                case '<=': conditionMet = varValue <= compareValue; break;
+                case '==': conditionMet = varValue === compareValue; break;
+              }
+              
+              if (conditionMet) {
+                output += (language === 'de' ? 'Bedingung erfüllt\n' : 'Condition met\n');
+              }
+            }
+          }
+          continue;
+        }
+      }
+    } catch (error) {
+      return `Error: ${error}`;
     }
-    if (code.includes('local x = ')) {
-      return language === 'de' ? 'Variable x wurde definiert' : 'Variable x defined';
+    
+    return output || (language === 'de' ? 'Code ausgeführt (keine Ausgabe)' : 'Code executed (no output)');
+  };
+
+  // Quiz questions
+  const quizQuestions = [
+    {
+      question: language === 'de' ? 'Wie gibst du "Hello World" in Lua aus?' : 'How do you print "Hello World" in Lua?',
+      answers: ['print("Hello World")', 'echo("Hello World")', 'console.log("Hello World")', 'puts("Hello World")'],
+      correct: 0
+    },
+    {
+      question: language === 'de' ? 'Wie definierst du eine lokale Variable in Lua?' : 'How do you define a local variable in Lua?',
+      answers: ['var x = 5', 'local x = 5', 'let x = 5', 'x := 5'],
+      correct: 1
+    },
+    {
+      question: language === 'de' ? 'Welches Schlüsselwort beendet eine if-Anweisung in Lua?' : 'Which keyword ends an if statement in Lua?',
+      answers: ['endif', 'end', 'fi', '}'],
+      correct: 1
+    },
+    {
+      question: language === 'de' ? 'Wie startest du eine Schleife von 1 bis 10 in Lua?' : 'How do you start a loop from 1 to 10 in Lua?',
+      answers: ['for i = 1, 10 do', 'for (i = 1; i <= 10; i++)', 'loop i from 1 to 10', 'repeat i = 1 to 10'],
+      correct: 0
     }
-    return language === 'de' ? 'Code ausgeführt' : 'Code executed';
+  ];
+
+  // Learning topics
+  const learningTopics = {
+    lua: {
+      print: {
+        title: 'print()',
+        content: language === 'de' ? 
+          'Die print() Funktion gibt Text oder Variablen in der Konsole aus.\n\nBeispiele:\nprint("Hello World")\nlocal name = "Max"\nprint(name)\nprint("Hallo " .. name)' :
+          'The print() function outputs text or variables to the console.\n\nExamples:\nprint("Hello World")\nlocal name = "Max"\nprint(name)\nprint("Hello " .. name)'
+      },
+      functions: {
+        title: language === 'de' ? 'Funktionen' : 'Functions',
+        content: language === 'de' ?
+          'Funktionen in Lua werden mit function definiert.\n\nBeispiel:\nfunction greet(name)\n  return "Hallo " .. name\nend\n\nlocal message = greet("World")\nprint(message)' :
+          'Functions in Lua are defined with function.\n\nExample:\nfunction greet(name)\n  return "Hello " .. name\nend\n\nlocal message = greet("World")\nprint(message)'
+      },
+      variables: {
+        title: language === 'de' ? 'Variablen' : 'Variables',
+        content: language === 'de' ?
+          'Variablen speichern Werte für späteren Gebrauch.\n\nBeispiele:\nlocal name = "Max"\nlocal age = 25\nlocal isStudent = true\n\nprint(name)\nprint(age)\nprint(isStudent)' :
+          'Variables store values for later use.\n\nExamples:\nlocal name = "Max"\nlocal age = 25\nlocal isStudent = true\n\nprint(name)\nprint(age)\nprint(isStudent)'
+      }
+    },
+    luau: {
+      touched: {
+        title: 'Touched Event',
+        content: language === 'de' ?
+          'Das Touched Event wird ausgelöst wenn ein Teil berührt wird.\n\nBeispiel:\nlocal part = workspace.Part\n\npart.Touched:Connect(function(hit)\n  print("Teil wurde berührt!")\n  local humanoid = hit.Parent:FindFirstChild("Humanoid")\n  if humanoid then\n    print("Ein Spieler hat das Teil berührt!")\n  end\nend)' :
+          'The Touched event fires when a part is touched.\n\nExample:\nlocal part = workspace.Part\n\npart.Touched:Connect(function(hit)\n  print("Part was touched!")\n  local humanoid = hit.Parent:FindFirstChild("Humanoid")\n  if humanoid then\n    print("A player touched the part!")\n  end\nend)'
+      },
+      tweenservice: {
+        title: 'TweenService',
+        content: language === 'de' ?
+          'TweenService wird für Animationen verwendet.\n\nBeispiel:\nlocal TweenService = game:GetService("TweenService")\nlocal part = workspace.Part\n\nlocal info = TweenInfo.new(\n  2, -- Dauer in Sekunden\n  Enum.EasingStyle.Quad\n)\n\nlocal goal = {Position = Vector3.new(0, 10, 0)}\nlocal tween = TweenService:Create(part, info, goal)\ntween:Play()' :
+          'TweenService is used for animations.\n\nExample:\nlocal TweenService = game:GetService("TweenService")\nlocal part = workspace.Part\n\nlocal info = TweenInfo.new(\n  2, -- Duration in seconds\n  Enum.EasingStyle.Quad\n)\n\nlocal goal = {Position = Vector3.new(0, 10, 0)}\nlocal tween = TweenService:Create(part, info, goal)\ntween:Play()'
+      }
+    }
   };
 
   // Language texts
@@ -685,7 +835,7 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
               </h1>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setLuaMode('quiz')}>
                 <CardHeader>
                   <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
@@ -708,6 +858,19 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
                 <CardContent>
                   <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
                     {language === 'de' ? 'Schreibe und teste Lua-Code direkt im Browser!' : 'Write and test Lua code directly in the browser!'}
+                  </p>
+                </CardContent>
+              </Card>
+
+              <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setLuaMode('learning')}>
+                <CardHeader>
+                  <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    📖 {language === 'de' ? 'Wie funktioniert es?' : 'How does it work?'}
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
+                    {language === 'de' ? 'Lerne Lua und Luau Konzepte mit detaillierten Erklärungen!' : 'Learn Lua and Luau concepts with detailed explanations!'}
                   </p>
                 </CardContent>
               </Card>
@@ -782,6 +945,182 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
           </div>
         </div>
       );
+    }
+
+    if (luaMode === 'quiz') {
+      const currentQuestion = quizQuestions[currentQuizQuestion];
+      const isQuizComplete = currentQuizQuestion >= quizQuestions.length;
+
+      return (
+        <div className={`min-h-screen p-6 transition-colors duration-500 ${isDarkMode ? '' : 'light-mode'}`} style={{ background: isDarkMode ? 'var(--chat-background)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-center gap-4 mb-8">
+              <Button
+                onClick={() => {setLuaMode('menu'); setCurrentQuizQuestion(0); setQuizAnswers([]);}}
+                variant="outline"
+                size="icon"
+                className={`w-10 h-10 transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+              <h1 className={`text-2xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                📚 Lua {t.quiz}
+              </h1>
+            </div>
+
+            {isQuizComplete ? (
+              <Card className={`border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
+                <CardContent className="p-8 text-center">
+                  <h2 className={`text-2xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    🎉 {language === 'de' ? 'Quiz abgeschlossen!' : 'Quiz completed!'}
+                  </h2>
+                  <p className={`text-lg mb-6 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
+                    {language === 'de' ? `Du hast ${quizAnswers.filter((answer, index) => answer === quizQuestions[index].correct).length} von ${quizQuestions.length} Fragen richtig beantwortet!` : 
+                    `You answered ${quizAnswers.filter((answer, index) => answer === quizQuestions[index].correct).length} out of ${quizQuestions.length} questions correctly!`}
+                  </p>
+                  <Button onClick={() => {setCurrentQuizQuestion(0); setQuizAnswers([]);}}>
+                    {language === 'de' ? 'Quiz wiederholen' : 'Retake Quiz'}
+                  </Button>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className={`border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
+                <CardHeader>
+                  <div className="flex justify-between items-center">
+                    <CardTitle className={`text-lg transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                      {language === 'de' ? 'Frage' : 'Question'} {currentQuizQuestion + 1} / {quizQuestions.length}
+                    </CardTitle>
+                    <Badge variant="secondary">{Math.round(((currentQuizQuestion) / quizQuestions.length) * 100)}%</Badge>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  <h3 className={`text-xl font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {currentQuestion.question}
+                  </h3>
+                  <div className="space-y-3">
+                    {currentQuestion.answers.map((answer, index) => (
+                      <Button
+                        key={index}
+                        variant="outline"
+                        className={`w-full text-left justify-start p-4 h-auto ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-800 hover:bg-gray-50'}`}
+                        onClick={() => {
+                          const newAnswers = [...quizAnswers];
+                          newAnswers[currentQuizQuestion] = index;
+                          setQuizAnswers(newAnswers);
+                          setTimeout(() => setCurrentQuizQuestion(currentQuizQuestion + 1), 500);
+                        }}
+                      >
+                        <span className="font-mono mr-3">{String.fromCharCode(65 + index)})</span>
+                        {answer}
+                      </Button>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    if (luaMode === 'learning') {
+      if (!learningTopic) {
+        return (
+          <div className={`min-h-screen p-6 transition-colors duration-500 ${isDarkMode ? '' : 'light-mode'}`} style={{ background: isDarkMode ? 'var(--chat-background)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center gap-4 mb-8">
+                <Button
+                  onClick={() => setLuaMode('menu')}
+                  variant="outline"
+                  size="icon"
+                  className={`w-10 h-10 transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h1 className={`text-2xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  📖 {language === 'de' ? 'Wie funktioniert es?' : 'How does it work?'}
+                </h1>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+                <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setLearningLanguage('lua')}>
+                  <CardHeader>
+                    <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                      🌙 Lua
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
+                      {language === 'de' ? 'Lerne die Grundlagen der Lua Programmiersprache' : 'Learn the basics of the Lua programming language'}
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setLearningLanguage('luau')}>
+                  <CardHeader>
+                    <CardTitle className={`text-xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                      🎮 Luau (Roblox)
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
+                      {language === 'de' ? 'Lerne Luau für Roblox Spielentwicklung' : 'Learn Luau for Roblox game development'}
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+
+              {learningLanguage && (
+                <div>
+                  <h2 className={`text-xl font-bold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                    {learningLanguage === 'lua' ? 'Lua' : 'Luau'} {language === 'de' ? 'Themen:' : 'Topics:'}
+                  </h2>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {Object.entries(learningTopics[learningLanguage]).map(([key, topic]) => (
+                      <Card key={key} className={`transition-all duration-300 hover:scale-105 cursor-pointer border ${isDarkMode ? 'bg-white/5 border-white/10 hover:bg-white/10' : 'bg-white border-gray-200 hover:bg-gray-50'}`} onClick={() => setLearningTopic(key)}>
+                        <CardContent className="p-4">
+                          <h3 className={`font-semibold ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                            {topic.title}
+                          </h3>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      } else {
+        const topic = learningTopics[learningLanguage][learningTopic as keyof typeof learningTopics['lua']];
+        return (
+          <div className={`min-h-screen p-6 transition-colors duration-500 ${isDarkMode ? '' : 'light-mode'}`} style={{ background: isDarkMode ? 'var(--chat-background)' : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)' }}>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-center gap-4 mb-8">
+                <Button
+                  onClick={() => setLearningTopic(null)}
+                  variant="outline"
+                  size="icon"
+                  className={`w-10 h-10 transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'}`}
+                >
+                  <ArrowLeft className="h-5 w-5" />
+                </Button>
+                <h1 className={`text-2xl font-bold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                  {topic?.title}
+                </h1>
+              </div>
+
+              <Card className={`border ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-white border-gray-200'}`}>
+                <CardContent className="p-8">
+                  <pre className={`whitespace-pre-wrap font-mono text-sm leading-relaxed ${isDarkMode ? 'text-white/90' : 'text-gray-800'}`}>
+                    {topic?.content}
+                  </pre>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        );
+      }
     }
   }
 
