@@ -302,24 +302,49 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
     let output = '';
     const lines = code.split('\n');
     const variables: Record<string, any> = {};
-    const functions: Record<string, Function> = {};
-    const tables: Record<string, any> = {};
     
-    // Built-in functions
+    // Comprehensive Lua/Luau built-in functions
     const builtins = {
-      type: (value: any) => typeof value === 'number' ? 'number' : typeof value === 'string' ? 'string' : typeof value === 'boolean' ? 'boolean' : value === null ? 'nil' : 'table',
-      tostring: (value: any) => String(value),
-      tonumber: (value: any) => isNaN(Number(value)) ? null : Number(value),
-      math: {
-        abs: Math.abs,
-        floor: Math.floor,
-        ceil: Math.ceil,
-        max: Math.max,
-        min: Math.min,
-        random: Math.random,
-        sqrt: Math.sqrt,
-        pi: Math.PI
+      // Core functions
+      print: (...args: any[]) => {
+        const text = args.map(arg => arg === null ? 'nil' : String(arg)).join('\t');
+        output += text + '\n';
       },
+      type: (value: any) => {
+        if (value === null || value === undefined) return 'nil';
+        if (typeof value === 'number') return 'number';
+        if (typeof value === 'string') return 'string';
+        if (typeof value === 'boolean') return 'boolean';
+        if (typeof value === 'function') return 'function';
+        return 'table';
+      },
+      tostring: (value: any) => value === null ? 'nil' : String(value),
+      tonumber: (value: any) => {
+        const num = Number(value);
+        return isNaN(num) ? null : num;
+      },
+      assert: (condition: any, message?: string) => {
+        if (!condition) throw new Error(message || "assertion failed");
+        return condition;
+      },
+      error: (message: string) => { throw new Error(message); },
+      
+      // Math library with all functions
+      math: {
+        abs: Math.abs, acos: Math.acos, asin: Math.asin, atan: Math.atan, atan2: Math.atan2,
+        ceil: Math.ceil, cos: Math.cos, deg: (rad: number) => rad * 180 / Math.PI,
+        exp: Math.exp, floor: Math.floor, fmod: (x: number, y: number) => x % y,
+        huge: Number.POSITIVE_INFINITY, log: Math.log, max: Math.max, min: Math.min,
+        pi: Math.PI, pow: Math.pow, rad: (deg: number) => deg * Math.PI / 180,
+        random: (...args: number[]) => {
+          if (args.length === 0) return Math.random();
+          if (args.length === 1) return Math.floor(Math.random() * args[0]) + 1;
+          return Math.floor(Math.random() * (args[1] - args[0] + 1)) + args[0];
+        },
+        sin: Math.sin, sinh: Math.sinh, sqrt: Math.sqrt, tan: Math.tan, tanh: Math.tanh
+      },
+      
+      // String library
       string: {
         len: (s: string) => s.length,
         upper: (s: string) => s.toUpperCase(),
@@ -327,9 +352,43 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
         sub: (s: string, start: number, end?: number) => s.substring(start - 1, end),
         find: (s: string, pattern: string) => {
           const index = s.indexOf(pattern);
-          return index !== -1 ? index + 1 : null;
+          return index !== -1 ? [index + 1, index + pattern.length] : null;
         },
-        gsub: (s: string, pattern: string, replacement: string) => s.split(pattern).join(replacement)
+        gsub: (s: string, pattern: string, replacement: string) => 
+          [s.split(pattern).join(replacement), s.split(pattern).length - 1],
+        rep: (s: string, n: number) => s.repeat(n),
+        reverse: (s: string) => s.split('').reverse().join(''),
+        byte: (s: string, i?: number) => s.charCodeAt((i || 1) - 1),
+        char: (...codes: number[]) => String.fromCharCode(...codes)
+      },
+      
+      // Table library
+      table: {
+        insert: (table: any[], value: any) => table.push(value),
+        remove: (table: any[], pos?: number) => pos ? table.splice(pos - 1, 1)[0] : table.pop(),
+        concat: (table: any[], sep?: string) => table.join(sep || ''),
+        sort: (table: any[]) => table.sort()
+      },
+      
+      // IO simplified
+      io: { write: (...args: any[]) => { output += args.join(''); } },
+      
+      // OS simplified  
+      os: {
+        time: () => Math.floor(Date.now() / 1000),
+        date: (format?: string) => format === '*t' ? 
+          { year: new Date().getFullYear(), month: new Date().getMonth() + 1, day: new Date().getDate() } : 
+          new Date().toString()
+      },
+      
+      // Luau specific
+      bit32: {
+        band: (a: number, b: number) => a & b,
+        bor: (a: number, b: number) => a | b,
+        bxor: (a: number, b: number) => a ^ b,
+        bnot: (x: number) => ~x,
+        lshift: (x: number, disp: number) => x << disp,
+        rshift: (x: number, disp: number) => x >> disp
       }
     };
 
@@ -343,14 +402,31 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
       if (expr === 'true') return true;
       if (expr === 'false') return false;
       
-      // Handle numbers
-      if (/^\d+(\.\d+)?$/.test(expr)) {
+      // Handle numbers (including hex, scientific notation)
+      if (/^-?\d+(\.\d+)?([eE][+-]?\d+)?$/.test(expr)) {
         return parseFloat(expr);
       }
+      if (/^0[xX][0-9a-fA-F]+$/.test(expr)) {
+        return parseInt(expr, 16);
+      }
       
-      // Handle strings
+      // Handle strings (both single and double quotes, multi-line)
       if (/^["'].*["']$/.test(expr)) {
         return expr.slice(1, -1);
+      }
+      if (/^\[\[.*\]\]$/s.test(expr)) {
+        return expr.slice(2, -2);
+      }
+      
+      // Handle function calls
+      const funcCallMatch = expr.match(/^(\w+(?:\.\w+)*)\((.*)\)$/);
+      if (funcCallMatch) {
+        const [, funcPath, args] = funcCallMatch;
+        const func = evaluateExpression(funcPath);
+        if (typeof func === 'function') {
+          const argList = args ? args.split(',').map(arg => evaluateExpression(arg.trim())) : [];
+          return func(...argList);
+        }
       }
       
       // Handle table literals
@@ -363,9 +439,12 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
         let index = 1;
         
         for (const item of items) {
-          if (item.includes('=')) {
+          if (item.includes('=') && !item.includes('==') && !item.includes('~=') && !item.includes('<=') && !item.includes('>=')) {
             const [key, value] = item.split('=').map(s => s.trim());
-            table[key] = evaluateExpression(value);
+            const keyStr = key.startsWith('[') && key.endsWith(']') ? 
+              evaluateExpression(key.slice(1, -1)) : 
+              key.replace(/['"]/g, '');
+            table[keyStr] = evaluateExpression(value);
           } else {
             table[index] = evaluateExpression(item);
             index++;
@@ -375,7 +454,7 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
       }
       
       // Handle string concatenation
-      if (expr.includes('..')) {
+      if (expr.includes('..') && !expr.includes('...')) {
         const parts = expr.split('..').map(p => p.trim());
         return parts.map(part => {
           const val = evaluateExpression(part);
@@ -383,12 +462,64 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
         }).join('');
       }
       
-      // Handle math operations
+      // Handle logical operations
+      if (expr.includes(' and ')) {
+        const parts = expr.split(' and ').map(p => p.trim());
+        for (const part of parts) {
+          const val = evaluateExpression(part);
+          if (!val) return val;
+        }
+        return evaluateExpression(parts[parts.length - 1]);
+      }
+      
+      if (expr.includes(' or ')) {
+        const parts = expr.split(' or ').map(p => p.trim());
+        for (const part of parts) {
+          const val = evaluateExpression(part);
+          if (val) return val;
+        }
+        return evaluateExpression(parts[parts.length - 1]);
+      }
+      
+      if (expr.startsWith('not ')) {
+        const val = evaluateExpression(expr.slice(4));
+        return !val;
+      }
+      
+      // Handle math operations (with proper precedence)
       const mathOps = /([+\-*/\^%])/;
-      if (mathOps.test(expr)) {
-        const match = expr.match(/(.+?)\s*([+\-*/\^%])\s*(.+)/);
-        if (match) {
-          const [, left, op, right] = match;
+      if (mathOps.test(expr) && !expr.includes('(')) {
+        // Handle ^ first (highest precedence)
+        const powMatch = expr.match(/(.+?)\s*\^\s*(.+)/);
+        if (powMatch) {
+          const [, left, right] = powMatch;
+          const leftVal = evaluateExpression(left);
+          const rightVal = evaluateExpression(right);
+          if (typeof leftVal === 'number' && typeof rightVal === 'number') {
+            return Math.pow(leftVal, rightVal);
+          }
+        }
+        
+        // Handle *, /, % (medium precedence)
+        const mulDivMatch = expr.match(/(.+?)\s*([*/%])\s*(.+)/);
+        if (mulDivMatch) {
+          const [, left, op, right] = mulDivMatch;
+          const leftVal = evaluateExpression(left);
+          const rightVal = evaluateExpression(right);
+          
+          if (typeof leftVal === 'number' && typeof rightVal === 'number') {
+            switch (op) {
+              case '*': return leftVal * rightVal;
+              case '/': return leftVal / rightVal;
+              case '%': return leftVal % rightVal;
+            }
+          }
+        }
+        
+        // Handle +, - (lowest precedence)
+        const addSubMatch = expr.match(/(.+?)\s*([+\-])\s*(.+)/);
+        if (addSubMatch) {
+          const [, left, op, right] = addSubMatch;
           const leftVal = evaluateExpression(left);
           const rightVal = evaluateExpression(right);
           
@@ -396,10 +527,6 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
             switch (op) {
               case '+': return leftVal + rightVal;
               case '-': return leftVal - rightVal;
-              case '*': return leftVal * rightVal;
-              case '/': return leftVal / rightVal;
-              case '^': return Math.pow(leftVal, rightVal);
-              case '%': return leftVal % rightVal;
             }
           }
         }
@@ -425,16 +552,36 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
         }
       }
       
+      // Handle unary minus
+      if (expr.startsWith('-') && expr.slice(1).trim()) {
+        const val = evaluateExpression(expr.slice(1));
+        return typeof val === 'number' ? -val : val;
+      }
+      
+      // Handle length operator
+      if (expr.startsWith('#')) {
+        const val = evaluateExpression(expr.slice(1));
+        if (typeof val === 'string') return val.length;
+        if (Array.isArray(val)) return val.length;
+        if (val && typeof val === 'object') return Object.keys(val).length;
+        return 0;
+      }
+      
       // Handle variables
       if (variables.hasOwnProperty(expr)) {
         return variables[expr];
       }
       
-      // Handle table access
-      if (expr.includes('.')) {
+      // Handle built-in constants
+      if (builtins.hasOwnProperty(expr)) {
+        return builtins[expr as keyof typeof builtins];
+      }
+      
+      // Handle table access with dot notation
+      if (expr.includes('.') && !expr.includes('..')) {
         const parts = expr.split('.');
-        let value: any = variables[parts[0]] || builtins;
-        for (let i = 1; i < parts.length && value; i++) {
+        let value: any = variables[parts[0]] || builtins[parts[0] as keyof typeof builtins];
+        for (let i = 1; i < parts.length && value !== undefined; i++) {
           value = value[parts[i]];
         }
         return value;
@@ -445,10 +592,15 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
         const match = expr.match(/(\w+)\[(.+)\]/);
         if (match) {
           const [, tableName, index] = match;
-          const table = variables[tableName];
+          const table = variables[tableName] || builtins[tableName as keyof typeof builtins];
           const indexValue = evaluateExpression(index);
           return table && table[indexValue];
         }
+      }
+      
+      // Handle parentheses
+      if (expr.startsWith('(') && expr.endsWith(')')) {
+        return evaluateExpression(expr.slice(1, -1));
       }
       
       return expr;
@@ -463,105 +615,338 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
           continue;
         }
         
-        // Handle print statements
-        if (line.includes('print(')) {
-          const match = line.match(/print\((.+?)\)/);
-          if (match) {
-            const expr = match[1];
-            const value = evaluateExpression(expr);
-            output += (value === null ? 'nil' : String(value)) + '\n';
-          }
-          i++;
-          continue;
-        }
-        
-        // Handle variable assignments
-        const varMatch = line.match(/(local\s+)?(\w+)\s*=\s*(.+)/);
-        if (varMatch) {
-          const [, isLocal, varName, expr] = varMatch;
-          const value = evaluateExpression(expr);
-          variables[varName] = value;
-          i++;
-          continue;
-        }
-        
-        // Handle function definitions
-        if (line.startsWith('function ')) {
-          const funcMatch = line.match(/function (\w+)\(([^)]*)\)/);
-          if (funcMatch) {
-            const [, funcName, params] = funcMatch;
-            const paramList = params ? params.split(',').map(p => p.trim()) : [];
-            
-            // Find function end
-            let funcBody = [];
-            i++;
-            while (i < lines.length && lines[i].trim() !== 'end') {
-              funcBody.push(lines[i]);
-              i++;
+        // Handle all function calls (including print, io.write, etc.)
+        const funcCallMatch = line.match(/^(\w+(?:\.\w+)*)\((.*)?\)$/);
+        if (funcCallMatch) {
+          const [, funcPath, args] = funcCallMatch;
+          const func = evaluateExpression(funcPath);
+          if (typeof func === 'function') {
+            const argList = args ? args.split(',').map(arg => evaluateExpression(arg.trim())) : [];
+            const result = func(...argList);
+            if (result !== undefined) {
+              output += String(result) + '\n';
             }
-            
-            functions[funcName] = (...args: any[]) => {
-              const savedVars = { ...variables };
-              paramList.forEach((param, idx) => {
-                variables[param] = args[idx];
-              });
-              
-              // Execute function body
-              let funcOutput = '';
-              // This is simplified - in a real implementation you'd need proper scoping
-              
-              // Restore variables
-              Object.assign(variables, savedVars);
-              return funcOutput;
-            };
           }
           i++;
           continue;
         }
         
-        // Handle for loops
-        const forMatch = line.match(/for (\w+)\s*=\s*(\d+),\s*(\d+)(?:,\s*(\d+))?\s+do/);
-        if (forMatch) {
-          const [, varName, start, end, step] = forMatch;
-          const startNum = parseInt(start);
-          const endNum = parseInt(end);
-          const stepNum = step ? parseInt(step) : 1;
+        // Handle multiple variable assignments
+        const multiVarMatch = line.match(/(local\s+)?(.+?)\s*=\s*(.+)/);
+        if (multiVarMatch) {
+          const [, isLocal, varNames, expr] = multiVarMatch;
+          const names = varNames.split(',').map(n => n.trim());
           
-          // Find loop end
-          let loopBody = [];
+          // Handle table assignments
+          if (expr.includes('[') && expr.includes(']')) {
+            const tableMatch = expr.match(/(\w+)\[(.+)\]/);
+            if (tableMatch) {
+              const [, tableName, index] = tableMatch;
+              const table = variables[tableName] || {};
+              const indexValue = evaluateExpression(index);
+              const value = evaluateExpression(varNames);
+              table[indexValue] = value;
+              variables[tableName] = table;
+              i++;
+              continue;
+            }
+          }
+          
+          const value = evaluateExpression(expr);
+          
+          // Multiple assignment
+          if (names.length > 1 && Array.isArray(value)) {
+            names.forEach((name, idx) => {
+              variables[name] = value[idx] || null;
+            });
+          } else {
+            variables[names[0]] = value;
+          }
           i++;
-          while (i < lines.length && lines[i].trim() !== 'end') {
-            loopBody.push(lines[i]);
+          continue;
+        }
+        
+        // Handle function definitions (including local functions)
+        const funcDefMatch = line.match(/(local\s+)?function\s+(\w+)\(([^)]*)\)/);
+        if (funcDefMatch) {
+          const [, isLocal, funcName, params] = funcDefMatch;
+          const paramList = params ? params.split(',').map(p => p.trim()) : [];
+          
+          // Find function end
+          let funcBody = [];
+          let depth = 1;
+          i++;
+          while (i < lines.length && depth > 0) {
+            const bodyLine = lines[i].trim();
+            if (bodyLine.startsWith('function') || bodyLine.includes(' do') || bodyLine === 'if' || bodyLine.startsWith('if ')) {
+              depth++;
+            } else if (bodyLine === 'end') {
+              depth--;
+            }
+            if (depth > 0) {
+              funcBody.push(lines[i]);
+            }
+            i++;
+          }
+          
+          functions[funcName] = (...args: any[]) => {
+            const savedVars = { ...variables };
+            paramList.forEach((param, idx) => {
+              variables[param] = args[idx] || null;
+            });
+            
+            let returnValue = null;
+            // Execute function body recursively
+            const funcCode = funcBody.join('\n');
+            const funcOutput = simulateLuaExecution(funcCode);
+            
+            // Restore variables
+            Object.assign(variables, savedVars);
+            return returnValue;
+          };
+          
+          variables[funcName] = functions[funcName];
+          continue;
+        }
+        
+        // Handle for loops (numeric and generic)
+        const forNumMatch = line.match(/for\s+(\w+)\s*=\s*(.+?),\s*(.+?)(?:,\s*(.+?))?\s+do/);
+        if (forNumMatch) {
+          const [, varName, start, end, step] = forNumMatch;
+          const startNum = evaluateExpression(start);
+          const endNum = evaluateExpression(end);
+          const stepNum = step ? evaluateExpression(step) : 1;
+          
+          let loopBody = [];
+          let depth = 1;
+          i++;
+          while (i < lines.length && depth > 0) {
+            const bodyLine = lines[i].trim();
+            if (bodyLine.includes(' do') || bodyLine.startsWith('for') || bodyLine.startsWith('while') || bodyLine.startsWith('if')) {
+              depth++;
+            } else if (bodyLine === 'end') {
+              depth--;
+            }
+            if (depth > 0) {
+              loopBody.push(lines[i]);
+            }
             i++;
           }
           
           // Execute loop
+          const savedVar = variables[varName];
           for (let loopVar = startNum; stepNum > 0 ? loopVar <= endNum : loopVar >= endNum; loopVar += stepNum) {
             variables[varName] = loopVar;
-            // Execute loop body (simplified)
-            for (const bodyLine of loopBody) {
-              const trimmed = bodyLine.trim();
-              if (trimmed.includes('print(')) {
-                const match = trimmed.match(/print\((.+?)\)/);
-                if (match) {
-                  const value = evaluateExpression(match[1]);
-                  output += (value === null ? 'nil' : String(value)) + '\n';
+            const loopCode = loopBody.join('\n');
+            const loopOutput = simulateLuaExecution(loopCode);
+            output += loopOutput;
+          }
+          variables[varName] = savedVar;
+          continue;
+        }
+        
+        // Handle generic for loops (pairs, ipairs)
+        const forGenMatch = line.match(/for\s+(.+?)\s+in\s+(.+?)\s+do/);
+        if (forGenMatch) {
+          const [, vars, iter] = forGenMatch;
+          const varList = vars.split(',').map(v => v.trim());
+          
+          let loopBody = [];
+          let depth = 1;
+          i++;
+          while (i < lines.length && depth > 0) {
+            const bodyLine = lines[i].trim();
+            if (bodyLine.includes(' do') || bodyLine.startsWith('for') || bodyLine.startsWith('while') || bodyLine.startsWith('if')) {
+              depth++;
+            } else if (bodyLine === 'end') {
+              depth--;
+            }
+            if (depth > 0) {
+              loopBody.push(lines[i]);
+            }
+            i++;
+          }
+          
+          // Handle pairs iteration
+          if (iter.includes('pairs(')) {
+            const tableMatch = iter.match(/pairs\((\w+)\)/);
+            if (tableMatch) {
+              const tableName = tableMatch[1];
+              const table = variables[tableName];
+              if (table && typeof table === 'object') {
+                for (const [key, value] of Object.entries(table)) {
+                  if (varList[0]) variables[varList[0]] = key;
+                  if (varList[1]) variables[varList[1]] = value;
+                  const loopCode = loopBody.join('\n');
+                  const loopOutput = simulateLuaExecution(loopCode);
+                  output += loopOutput;
                 }
               }
             }
           }
-          i++;
+          
+          // Handle ipairs iteration
+          if (iter.includes('ipairs(')) {
+            const tableMatch = iter.match(/ipairs\((\w+)\)/);
+            if (tableMatch) {
+              const tableName = tableMatch[1];
+              const table = variables[tableName];
+              if (Array.isArray(table)) {
+                table.forEach((value, index) => {
+                  if (varList[0]) variables[varList[0]] = index + 1;
+                  if (varList[1]) variables[varList[1]] = value;
+                  const loopCode = loopBody.join('\n');
+                  const loopOutput = simulateLuaExecution(loopCode);
+                  output += loopOutput;
+                });
+              }
+            }
+          }
           continue;
         }
         
         // Handle while loops
-        if (line.match(/while .+ do/)) {
-          const condMatch = line.match(/while (.+) do/);
-          if (condMatch) {
-            const condition = condMatch[1];
-            
-            // Find loop end
-            let loopBody = [];
+        const whileMatch = line.match(/while\s+(.+?)\s+do/);
+        if (whileMatch) {
+          const condition = whileMatch[1];
+          
+          let loopBody = [];
+          let depth = 1;
+          i++;
+          while (i < lines.length && depth > 0) {
+            const bodyLine = lines[i].trim();
+            if (bodyLine.includes(' do') || bodyLine.startsWith('for') || bodyLine.startsWith('while') || bodyLine.startsWith('if')) {
+              depth++;
+            } else if (bodyLine === 'end') {
+              depth--;
+            }
+            if (depth > 0) {
+              loopBody.push(lines[i]);
+            }
+            i++;
+          }
+          
+          // Execute while loop
+          let iterations = 0;
+          while (evaluateExpression(condition) && iterations < 1000) { // Prevent infinite loops
+            const loopCode = loopBody.join('\n');
+            const loopOutput = simulateLuaExecution(loopCode);
+            output += loopOutput;
+            iterations++;
+          }
+          continue;
+        }
+        
+        // Handle if statements
+        const ifMatch = line.match(/if\s+(.+?)\s+then/);
+        if (ifMatch) {
+          const condition = ifMatch[1];
+          
+          let ifBody = [];
+          let elseBody: string[] = [];
+          let currentBody = ifBody;
+          let depth = 1;
+          i++;
+          
+          while (i < lines.length && depth > 0) {
+            const bodyLine = lines[i].trim();
+            if (bodyLine === 'else' && depth === 1) {
+              currentBody = elseBody;
+            } else if (bodyLine.startsWith('if') || bodyLine.includes(' do') || bodyLine.startsWith('for') || bodyLine.startsWith('while')) {
+              depth++;
+              currentBody.push(lines[i]);
+            } else if (bodyLine === 'end') {
+              depth--;
+              if (depth > 0) {
+                currentBody.push(lines[i]);
+              }
+            } else {
+              currentBody.push(lines[i]);
+            }
+            i++;
+          }
+          
+          // Execute if/else
+          if (evaluateExpression(condition)) {
+            const ifCode = ifBody.join('\n');
+            const ifOutput = simulateLuaExecution(ifCode);
+            output += ifOutput;
+          } else if (elseBody.length > 0) {
+            const elseCode = elseBody.join('\n');
+            const elseOutput = simulateLuaExecution(elseCode);
+            output += elseOutput;
+          }
+          continue;
+        }
+        
+        // Handle repeat-until loops
+        if (line === 'repeat') {
+          let loopBody = [];
+          i++;
+          while (i < lines.length && !lines[i].trim().startsWith('until')) {
+            loopBody.push(lines[i]);
+            i++;
+          }
+          
+          // Get until condition
+          const untilLine = lines[i]?.trim();
+          const untilMatch = untilLine?.match(/until\s+(.+)/);
+          const condition = untilMatch ? untilMatch[1] : 'true';
+          
+          // Execute repeat-until loop
+          let iterations = 0;
+          do {
+            const loopCode = loopBody.join('\n');
+            const loopOutput = simulateLuaExecution(loopCode);
+            output += loopOutput;
+            iterations++;
+          } while (!evaluateExpression(condition) && iterations < 1000);
+          
+          i++;
+          continue;
+        }
+        
+        // Handle return statements
+        if (line.startsWith('return')) {
+          const returnMatch = line.match(/return\s*(.+)?/);
+          if (returnMatch && returnMatch[1]) {
+            const value = evaluateExpression(returnMatch[1]);
+            output += `return: ${value === null ? 'nil' : String(value)}\n`;
+          }
+          break; // Exit execution
+        }
+        
+        // Handle break and continue (Luau)
+        if (line === 'break' || line === 'continue') {
+          break; // Simplified handling
+        }
+        
+        // Handle table operations
+        if (line.includes('.') && line.includes('=')) {
+          const tableAssignMatch = line.match(/(\w+)\.(\w+)\s*=\s*(.+)/);
+          if (tableAssignMatch) {
+            const [, tableName, key, value] = tableAssignMatch;
+            if (!variables[tableName]) variables[tableName] = {};
+            variables[tableName][key] = evaluateExpression(value);
+            i++;
+            continue;
+          }
+        }
+        
+        // Handle require statements (simplified)
+        if (line.includes('require(')) {
+          const requireMatch = line.match(/(\w+)\s*=\s*require\((.+?)\)/);
+          if (requireMatch) {
+            const [, varName, moduleName] = requireMatch;
+            // Simplified - just create an empty module
+            variables[varName] = {};
+            i++;
+            continue;
+          }
+        }
+        
+        i++;
+      }
             i++;
             while (i < lines.length && lines[i].trim() !== 'end') {
               loopBody.push(lines[i]);
@@ -594,42 +979,10 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
           continue;
         }
         
-        // Handle if statements
-        if (line.match(/if .+ then/)) {
-          const condMatch = line.match(/if (.+) then/);
-          if (condMatch) {
-            const condition = condMatch[1];
-            const conditionMet = evaluateExpression(condition);
-            
-            // Find if block end
-            let ifBody = [];
-            i++;
-            while (i < lines.length && !lines[i].trim().match(/^(end|else|elseif)/)) {
-              ifBody.push(lines[i]);
-              i++;
-            }
-            
-            // Execute if body if condition is met
-            if (conditionMet) {
-              for (const bodyLine of ifBody) {
-                const trimmed = bodyLine.trim();
-                if (trimmed.includes('print(')) {
-                  const match = trimmed.match(/print\((.+?)\)/);
-                  if (match) {
-                    const value = evaluateExpression(match[1]);
-                    output += (value === null ? 'nil' : String(value)) + '\n';
-                  }
-                }
-              }
-            }
-            
-            // Skip to end
-            while (i < lines.length && lines[i].trim() !== 'end') {
-              i++;
-            }
-          }
-          i++;
-          continue;
+        // Handle any remaining expression statements
+        const result = evaluateExpression(line);
+        if (result !== undefined && result !== line && typeof result !== 'function') {
+          // Only output non-function results that aren't the original line
         }
         
         i++;
