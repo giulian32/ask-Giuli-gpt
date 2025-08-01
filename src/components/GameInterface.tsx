@@ -302,135 +302,337 @@ Antworte im Charakter und versuche das Passwort zu schützen, aber lass dich ent
     let output = '';
     const lines = code.split('\n');
     const variables: Record<string, any> = {};
+    const functions: Record<string, Function> = {};
+    const tables: Record<string, any> = {};
     
-    try {
-      for (let line of lines) {
-        line = line.trim();
-        if (!line || line.startsWith('--')) continue;
+    // Built-in functions
+    const builtins = {
+      type: (value: any) => typeof value === 'number' ? 'number' : typeof value === 'string' ? 'string' : typeof value === 'boolean' ? 'boolean' : value === null ? 'nil' : 'table',
+      tostring: (value: any) => String(value),
+      tonumber: (value: any) => isNaN(Number(value)) ? null : Number(value),
+      math: {
+        abs: Math.abs,
+        floor: Math.floor,
+        ceil: Math.ceil,
+        max: Math.max,
+        min: Math.min,
+        random: Math.random,
+        sqrt: Math.sqrt,
+        pi: Math.PI
+      },
+      string: {
+        len: (s: string) => s.length,
+        upper: (s: string) => s.toUpperCase(),
+        lower: (s: string) => s.toLowerCase(),
+        sub: (s: string, start: number, end?: number) => s.substring(start - 1, end),
+        find: (s: string, pattern: string) => {
+          const index = s.indexOf(pattern);
+          return index !== -1 ? index + 1 : null;
+        },
+        gsub: (s: string, pattern: string, replacement: string) => s.split(pattern).join(replacement)
+      }
+    };
+
+    const evaluateExpression = (expr: string): any => {
+      expr = expr.trim();
+      
+      // Handle nil
+      if (expr === 'nil') return null;
+      
+      // Handle booleans
+      if (expr === 'true') return true;
+      if (expr === 'false') return false;
+      
+      // Handle numbers
+      if (/^\d+(\.\d+)?$/.test(expr)) {
+        return parseFloat(expr);
+      }
+      
+      // Handle strings
+      if (/^["'].*["']$/.test(expr)) {
+        return expr.slice(1, -1);
+      }
+      
+      // Handle table literals
+      if (expr.startsWith('{') && expr.endsWith('}')) {
+        const content = expr.slice(1, -1).trim();
+        if (!content) return {};
         
-        // Handle print statements with various formats
-        if (line.includes('print(')) {
-          // String literal
-          const stringMatch = line.match(/print\(["'](.+?)["']\)/);
-          if (stringMatch) {
-            output += stringMatch[1] + '\n';
-            continue;
-          }
-          
-          // Variable
-          const varMatch = line.match(/print\((\w+)\)/);
-          if (varMatch && variables[varMatch[1]] !== undefined) {
-            output += variables[varMatch[1]] + '\n';
-            continue;
-          }
-          
-          // Number
-          const numberMatch = line.match(/print\((\d+(?:\.\d+)?)\)/);
-          if (numberMatch) {
-            output += numberMatch[1] + '\n';
-            continue;
-          }
-          
-          // String concatenation
-          const concatMatch = line.match(/print\((.+?)\)/);
-          if (concatMatch) {
-            let expr = concatMatch[1];
-            // Replace variables
-            for (const [varName, value] of Object.entries(variables)) {
-              expr = expr.replace(new RegExp(`\\b${varName}\\b`, 'g'), `"${value}"`);
-            }
-            // Handle simple concatenation
-            if (expr.includes('..')) {
-              const parts = expr.split('..').map(p => p.trim().replace(/['"]/g, ''));
-              output += parts.join('') + '\n';
-            }
-            continue;
+        const table: any = {};
+        const items = content.split(',').map(item => item.trim());
+        let index = 1;
+        
+        for (const item of items) {
+          if (item.includes('=')) {
+            const [key, value] = item.split('=').map(s => s.trim());
+            table[key] = evaluateExpression(value);
+          } else {
+            table[index] = evaluateExpression(item);
+            index++;
           }
         }
-        
-        // Handle variable assignments (local and global)
-        const localVarMatch = line.match(/local (\w+) = (.+)/);
-        const globalVarMatch = line.match(/(\w+) = (.+)/);
-        const varMatch = localVarMatch || globalVarMatch;
-        
-        if (varMatch) {
-          const varName = varMatch[1];
-          let value = varMatch[2];
+        return table;
+      }
+      
+      // Handle string concatenation
+      if (expr.includes('..')) {
+        const parts = expr.split('..').map(p => p.trim());
+        return parts.map(part => {
+          const val = evaluateExpression(part);
+          return val === null ? 'nil' : String(val);
+        }).join('');
+      }
+      
+      // Handle math operations
+      const mathOps = /([+\-*/\^%])/;
+      if (mathOps.test(expr)) {
+        const match = expr.match(/(.+?)\s*([+\-*/\^%])\s*(.+)/);
+        if (match) {
+          const [, left, op, right] = match;
+          const leftVal = evaluateExpression(left);
+          const rightVal = evaluateExpression(right);
           
-          // Number
-          if (value.match(/^\d+(\.\d+)?$/)) {
-            variables[varName] = parseFloat(value);
-          }
-          // String
-          else if (value.match(/^["'](.+)["']$/)) {
-            variables[varName] = value.replace(/^["']|["']$/g, '');
-          }
-          // Boolean
-          else if (value === 'true' || value === 'false') {
-            variables[varName] = value === 'true';
-          }
-          // Math expression with variables
-          else if (value.match(/\w+\s*[+\-*/]\s*\w+/)) {
-            const mathMatch = value.match(/(\w+)\s*([+\-*/])\s*(\w+)/);
-            if (mathMatch) {
-              const [, var1, op, var2] = mathMatch;
-              const val1 = variables[var1] || (isNaN(Number(var1)) ? 0 : Number(var1));
-              const val2 = variables[var2] || (isNaN(Number(var2)) ? 0 : Number(var2));
-              
-              switch (op) {
-                case '+': variables[varName] = val1 + val2; break;
-                case '-': variables[varName] = val1 - val2; break;
-                case '*': variables[varName] = val1 * val2; break;
-                case '/': variables[varName] = val1 / val2; break;
-              }
+          if (typeof leftVal === 'number' && typeof rightVal === 'number') {
+            switch (op) {
+              case '+': return leftVal + rightVal;
+              case '-': return leftVal - rightVal;
+              case '*': return leftVal * rightVal;
+              case '/': return leftVal / rightVal;
+              case '^': return Math.pow(leftVal, rightVal);
+              case '%': return leftVal % rightVal;
             }
           }
-          // Variable reference
-          else if (variables[value]) {
-            variables[varName] = variables[value];
-          }
+        }
+      }
+      
+      // Handle comparisons
+      const compOps = /(==|~=|<=|>=|<|>)/;
+      if (compOps.test(expr)) {
+        const match = expr.match(/(.+?)\s*(==|~=|<=|>=|<|>)\s*(.+)/);
+        if (match) {
+          const [, left, op, right] = match;
+          const leftVal = evaluateExpression(left);
+          const rightVal = evaluateExpression(right);
           
-          output += (language === 'de' ? `Variable ${varName} = ${variables[varName]}\n` : `Variable ${varName} = ${variables[varName]}\n`);
+          switch (op) {
+            case '==': return leftVal === rightVal;
+            case '~=': return leftVal !== rightVal;
+            case '<': return leftVal < rightVal;
+            case '>': return leftVal > rightVal;
+            case '<=': return leftVal <= rightVal;
+            case '>=': return leftVal >= rightVal;
+          }
+        }
+      }
+      
+      // Handle variables
+      if (variables.hasOwnProperty(expr)) {
+        return variables[expr];
+      }
+      
+      // Handle table access
+      if (expr.includes('.')) {
+        const parts = expr.split('.');
+        let value: any = variables[parts[0]] || builtins;
+        for (let i = 1; i < parts.length && value; i++) {
+          value = value[parts[i]];
+        }
+        return value;
+      }
+      
+      // Handle table index access
+      if (expr.includes('[') && expr.includes(']')) {
+        const match = expr.match(/(\w+)\[(.+)\]/);
+        if (match) {
+          const [, tableName, index] = match;
+          const table = variables[tableName];
+          const indexValue = evaluateExpression(index);
+          return table && table[indexValue];
+        }
+      }
+      
+      return expr;
+    };
+    
+    try {
+      let i = 0;
+      while (i < lines.length) {
+        let line = lines[i].trim();
+        if (!line || line.startsWith('--')) {
+          i++;
           continue;
         }
         
-        // Handle for loops (basic)
-        if (line.match(/for \w+ = \d+, \d+ do/)) {
-          const forMatch = line.match(/for (\w+) = (\d+), (\d+) do/);
-          if (forMatch) {
-            const [, varName, start, end] = forMatch;
-            output += (language === 'de' ? `Schleife von ${start} bis ${end}\n` : `Loop from ${start} to ${end}\n`);
+        // Handle print statements
+        if (line.includes('print(')) {
+          const match = line.match(/print\((.+?)\)/);
+          if (match) {
+            const expr = match[1];
+            const value = evaluateExpression(expr);
+            output += (value === null ? 'nil' : String(value)) + '\n';
           }
+          i++;
+          continue;
+        }
+        
+        // Handle variable assignments
+        const varMatch = line.match(/(local\s+)?(\w+)\s*=\s*(.+)/);
+        if (varMatch) {
+          const [, isLocal, varName, expr] = varMatch;
+          const value = evaluateExpression(expr);
+          variables[varName] = value;
+          i++;
+          continue;
+        }
+        
+        // Handle function definitions
+        if (line.startsWith('function ')) {
+          const funcMatch = line.match(/function (\w+)\(([^)]*)\)/);
+          if (funcMatch) {
+            const [, funcName, params] = funcMatch;
+            const paramList = params ? params.split(',').map(p => p.trim()) : [];
+            
+            // Find function end
+            let funcBody = [];
+            i++;
+            while (i < lines.length && lines[i].trim() !== 'end') {
+              funcBody.push(lines[i]);
+              i++;
+            }
+            
+            functions[funcName] = (...args: any[]) => {
+              const savedVars = { ...variables };
+              paramList.forEach((param, idx) => {
+                variables[param] = args[idx];
+              });
+              
+              // Execute function body
+              let funcOutput = '';
+              // This is simplified - in a real implementation you'd need proper scoping
+              
+              // Restore variables
+              Object.assign(variables, savedVars);
+              return funcOutput;
+            };
+          }
+          i++;
+          continue;
+        }
+        
+        // Handle for loops
+        const forMatch = line.match(/for (\w+)\s*=\s*(\d+),\s*(\d+)(?:,\s*(\d+))?\s+do/);
+        if (forMatch) {
+          const [, varName, start, end, step] = forMatch;
+          const startNum = parseInt(start);
+          const endNum = parseInt(end);
+          const stepNum = step ? parseInt(step) : 1;
+          
+          // Find loop end
+          let loopBody = [];
+          i++;
+          while (i < lines.length && lines[i].trim() !== 'end') {
+            loopBody.push(lines[i]);
+            i++;
+          }
+          
+          // Execute loop
+          for (let loopVar = startNum; stepNum > 0 ? loopVar <= endNum : loopVar >= endNum; loopVar += stepNum) {
+            variables[varName] = loopVar;
+            // Execute loop body (simplified)
+            for (const bodyLine of loopBody) {
+              const trimmed = bodyLine.trim();
+              if (trimmed.includes('print(')) {
+                const match = trimmed.match(/print\((.+?)\)/);
+                if (match) {
+                  const value = evaluateExpression(match[1]);
+                  output += (value === null ? 'nil' : String(value)) + '\n';
+                }
+              }
+            }
+          }
+          i++;
+          continue;
+        }
+        
+        // Handle while loops
+        if (line.match(/while .+ do/)) {
+          const condMatch = line.match(/while (.+) do/);
+          if (condMatch) {
+            const condition = condMatch[1];
+            
+            // Find loop end
+            let loopBody = [];
+            i++;
+            while (i < lines.length && lines[i].trim() !== 'end') {
+              loopBody.push(lines[i]);
+              i++;
+            }
+            
+            // Execute while loop (with safety limit)
+            let iterations = 0;
+            while (evaluateExpression(condition) && iterations < 1000) {
+              for (const bodyLine of loopBody) {
+                const trimmed = bodyLine.trim();
+                if (trimmed.includes('print(')) {
+                  const match = trimmed.match(/print\((.+?)\)/);
+                  if (match) {
+                    const value = evaluateExpression(match[1]);
+                    output += (value === null ? 'nil' : String(value)) + '\n';
+                  }
+                }
+                // Handle variable assignments in loop
+                const varMatch = trimmed.match(/(local\s+)?(\w+)\s*=\s*(.+)/);
+                if (varMatch) {
+                  const [, isLocal, varName, expr] = varMatch;
+                  variables[varName] = evaluateExpression(expr);
+                }
+              }
+              iterations++;
+            }
+          }
+          i++;
           continue;
         }
         
         // Handle if statements
-        if (line.includes('if ') && line.includes('then')) {
-          const condition = line.match(/if (.+) then/)?.[1];
-          if (condition) {
-            const compMatch = condition.match(/(\w+)\s*([><=]+|==|~=)\s*(\d+)/);
-            if (compMatch) {
-              const [, varName, operator, value] = compMatch;
-              const varValue = variables[varName] || 0;
-              const compareValue = parseFloat(value);
-              let conditionMet = false;
-              
-              switch (operator) {
-                case '>': conditionMet = varValue > compareValue; break;
-                case '<': conditionMet = varValue < compareValue; break;
-                case '>=': conditionMet = varValue >= compareValue; break;
-                case '<=': conditionMet = varValue <= compareValue; break;
-                case '==': conditionMet = varValue === compareValue; break;
-                case '~=': conditionMet = varValue !== compareValue; break;
+        if (line.match(/if .+ then/)) {
+          const condMatch = line.match(/if (.+) then/);
+          if (condMatch) {
+            const condition = condMatch[1];
+            const conditionMet = evaluateExpression(condition);
+            
+            // Find if block end
+            let ifBody = [];
+            i++;
+            while (i < lines.length && !lines[i].trim().match(/^(end|else|elseif)/)) {
+              ifBody.push(lines[i]);
+              i++;
+            }
+            
+            // Execute if body if condition is met
+            if (conditionMet) {
+              for (const bodyLine of ifBody) {
+                const trimmed = bodyLine.trim();
+                if (trimmed.includes('print(')) {
+                  const match = trimmed.match(/print\((.+?)\)/);
+                  if (match) {
+                    const value = evaluateExpression(match[1]);
+                    output += (value === null ? 'nil' : String(value)) + '\n';
+                  }
+                }
               }
-              
-              output += (language === 'de' ? 
-                `Bedingung ${varName} ${operator} ${value}: ${conditionMet ? 'erfüllt' : 'nicht erfüllt'}\n` :
-                `Condition ${varName} ${operator} ${value}: ${conditionMet ? 'true' : 'false'}\n`);
+            }
+            
+            // Skip to end
+            while (i < lines.length && lines[i].trim() !== 'end') {
+              i++;
             }
           }
+          i++;
           continue;
         }
+        
+        i++;
       }
     } catch (error) {
       return `Error: ${error}`;
