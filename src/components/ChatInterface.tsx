@@ -201,7 +201,7 @@ const ChatInterface = () => {
 
   // Wenn Spiel-Modus aktiviert ist, zeige GameInterface
   if (chatMode === 'spiel') {
-    return <GameInterface onBackToChat={() => setChatMode('normal')} isDarkMode={isDarkMode} language={language} />;
+    return <GameInterface language={language} />;
   }
 
   return (
