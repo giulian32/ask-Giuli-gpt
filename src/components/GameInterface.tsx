@@ -23,6 +23,14 @@ const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
   const [selectedAnswer, setSelectedAnswer] = useState<string>('');
   const [showResult, setShowResult] = useState<boolean>(false);
   const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
+  
+  // Password Hacking Game State
+  const [targetPassword, setTargetPassword] = useState<string>('');
+  const [guessedPassword, setGuessedPassword] = useState<string>('');
+  const [attempts, setAttempts] = useState<number>(0);
+  const [maxAttempts] = useState<number>(5);
+  const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
+  const [hints, setHints] = useState<string[]>([]);
 
   // Tic Tac Toe Logic
   const checkWinner = (squares: (string | null)[]): string | null => {
@@ -478,8 +486,71 @@ const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
     setQuizCompleted(false);
   };
 
+  // Password Hacking Game Logic
+  const passwords = [
+    'admin123', 'password', 'qwerty', 'letmein', '123456', 'welcome', 'secret', 'test123'
+  ];
+
+  const generateRandomPassword = () => {
+    return passwords[Math.floor(Math.random() * passwords.length)];
+  };
+
+  const startPasswordGame = () => {
+    const newPassword = generateRandomPassword();
+    setTargetPassword(newPassword);
+    setGuessedPassword('');
+    setAttempts(0);
+    setGameStatus('playing');
+    setHints([]);
+  };
+
+  const generateHint = (target: string, guess: string): string => {
+    if (guess.length !== target.length) {
+      return language === 'de' 
+        ? `Falshe Länge! Das Passwort hat ${target.length} Zeichen.`
+        : `Wrong length! The password has ${target.length} characters.`;
+    }
+    
+    let correctPosition = 0;
+    let correctLetters = 0;
+    
+    for (let i = 0; i < target.length; i++) {
+      if (target[i] === guess[i]) {
+        correctPosition++;
+      } else if (target.includes(guess[i])) {
+        correctLetters++;
+      }
+    }
+    
+    return language === 'de'
+      ? `${correctPosition} richtige Zeichen an richtiger Position, ${correctLetters} richtige Zeichen an falscher Position`
+      : `${correctPosition} correct characters in correct position, ${correctLetters} correct characters in wrong position`;
+  };
+
+  const submitPasswordGuess = () => {
+    if (!guessedPassword.trim()) return;
+    
+    if (guessedPassword === targetPassword) {
+      setGameStatus('won');
+      return;
+    }
+    
+    const newAttempts = attempts + 1;
+    setAttempts(newAttempts);
+    
+    if (newAttempts >= maxAttempts) {
+      setGameStatus('lost');
+      return;
+    }
+    
+    const hint = generateHint(targetPassword, guessedPassword);
+    setHints([...hints, `${guessedPassword}: ${hint}`]);
+    setGuessedPassword('');
+  };
+
   const gameOptions = [
     { id: 'tic-tac-toe', name: language === 'de' ? 'Tic-Tac-Toe' : 'Tic-Tac-Toe' },
+    { id: 'password-hacking', name: language === 'de' ? 'Passwort Hacken' : 'Password Hacking' },
     { id: 'lua-learning', name: language === 'de' ? 'Lua/Luau Lernen' : 'Lua/Luau Learning' }
   ];
 
@@ -548,6 +619,119 @@ const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
             </Button>
           ))}
         </div>
+      </div>
+    );
+  }
+
+  if (selectedGame === 'password-hacking') {
+    return (
+      <div className="w-full max-w-4xl mx-auto p-6">
+        <div className="flex justify-between items-center mb-6">
+          <Button variant="outline" onClick={() => setSelectedGame(null)}>
+            {language === 'de' ? 'Zurück' : 'Back'}
+          </Button>
+          <h1 className="text-3xl font-bold">
+            {language === 'de' ? 'Passwort Hacken' : 'Password Hacking'}
+          </h1>
+          <Button onClick={startPasswordGame}>
+            {language === 'de' ? 'Neues Spiel' : 'New Game'}
+          </Button>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {language === 'de' ? 'Hack das Passwort!' : 'Hack the Password!'}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {gameStatus === 'playing' && (
+              <div className="space-y-6">
+                <div className="text-center">
+                  <p className="text-lg mb-2">
+                    {language === 'de' 
+                      ? `Versuche ${attempts + 1} von ${maxAttempts}`
+                      : `Attempt ${attempts + 1} of ${maxAttempts}`
+                    }
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {language === 'de' 
+                      ? 'Rate das geheime Passwort! Du bekommst Hinweise nach jedem Versuch.'
+                      : 'Guess the secret password! You\'ll get hints after each attempt.'
+                    }
+                  </p>
+                </div>
+
+                <div className="flex space-x-2">
+                  <Input
+                    value={guessedPassword}
+                    onChange={(e) => setGuessedPassword(e.target.value)}
+                    placeholder={language === 'de' ? 'Gib dein Passwort ein...' : 'Enter your password guess...'}
+                    onKeyPress={(e) => e.key === 'Enter' && submitPasswordGuess()}
+                  />
+                  <Button onClick={submitPasswordGuess}>
+                    {language === 'de' ? 'Raten' : 'Guess'}
+                  </Button>
+                </div>
+
+                {hints.length > 0 && (
+                  <div>
+                    <h3 className="font-semibold mb-2">
+                      {language === 'de' ? 'Hinweise:' : 'Hints:'}
+                    </h3>
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {hints.map((hint, index) => (
+                        <div key={index} className="p-2 bg-muted rounded text-sm">
+                          {hint}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {gameStatus === 'won' && (
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-green-600 mb-4">
+                  {language === 'de' ? 'Gewonnen!' : 'You Won!'}
+                </h2>
+                <p className="text-lg mb-4">
+                  {language === 'de' 
+                    ? `Das Passwort war: ${targetPassword}`
+                    : `The password was: ${targetPassword}`
+                  }
+                </p>
+                <p className="text-sm">
+                  {language === 'de' 
+                    ? `Du hast es in ${attempts} Versuchen geschafft!`
+                    : `You cracked it in ${attempts} attempts!`
+                  }
+                </p>
+              </div>
+            )}
+
+            {gameStatus === 'lost' && (
+              <div className="text-center">
+                <h2 className="text-2xl font-bold text-red-600 mb-4">
+                  {language === 'de' ? 'Verloren!' : 'You Lost!'}
+                </h2>
+                <p className="text-lg mb-4">
+                  {language === 'de' 
+                    ? `Das Passwort war: ${targetPassword}`
+                    : `The password was: ${targetPassword}`
+                  }
+                </p>
+                <p className="text-sm">
+                  {language === 'de' 
+                    ? 'Versuch es nochmal!'
+                    : 'Try again!'
+                  }
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
       </div>
     );
   }
@@ -746,34 +930,266 @@ const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
       );
     }
 
-    // How it works and Tutorial sections would go here
-    // For brevity, I'll just show a placeholder
-    return (
-      <div className="w-full max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => setSelectedSection(null)}>
-            {language === 'de' ? 'Zurück' : 'Back'}
-          </Button>
-          <h1 className="text-3xl font-bold">
-            {selectedSection === 'how-it-works' 
-              ? (language === 'de' ? 'Wie es funktioniert' : 'How it works')
-              : (language === 'de' ? 'Tutorial' : 'Tutorial')
-            }
-          </h1>
+    if (selectedSection === 'how-it-works') {
+      return (
+        <div className="w-full max-w-4xl mx-auto p-6">
+          <div className="flex justify-between items-center mb-6">
+            <Button variant="outline" onClick={() => setSelectedSection(null)}>
+              {language === 'de' ? 'Zurück' : 'Back'}
+            </Button>
+            <h1 className="text-3xl font-bold">
+              {language === 'de' ? 'Wie es funktioniert' : 'How it works'}
+            </h1>
+          </div>
+          
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Was ist Lua?' : 'What is Lua?'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  {language === 'de' 
+                    ? 'Lua ist eine leichtgewichtige, hochperformante Skriptsprache, die für ihre Einfachheit und Einbettbarkeit bekannt ist. Sie wird häufig in Spielen, Webanwendungen und eingebetteten Systemen verwendet.'
+                    : 'Lua is a lightweight, high-performance scripting language known for its simplicity and embeddability. It\'s commonly used in games, web applications, and embedded systems.'
+                  }
+                </p>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>{language === 'de' ? 'Einfache und klare Syntax' : 'Simple and clear syntax'}</li>
+                  <li>{language === 'de' ? 'Dynamische Typisierung' : 'Dynamic typing'}</li>
+                  <li>{language === 'de' ? 'Automatische Speicherverwaltung' : 'Automatic memory management'}</li>
+                  <li>{language === 'de' ? 'Erste-Klasse-Funktionen' : 'First-class functions'}</li>
+                  <li>{language === 'de' ? 'Coroutinen für kooperatives Multitasking' : 'Coroutines for cooperative multitasking'}</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Was ist Luau?' : 'What is Luau?'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  {language === 'de' 
+                    ? 'Luau ist eine von Roblox entwickelte Variante von Lua, die zusätzliche Funktionen und Verbesserungen bietet:'
+                    : 'Luau is a variant of Lua developed by Roblox that offers additional features and improvements:'
+                  }
+                </p>
+                <ul className="list-disc list-inside space-y-2">
+                  <li>{language === 'de' ? 'Optionale Typisierung für bessere Codequalität' : 'Optional typing for better code quality'}</li>
+                  <li>{language === 'de' ? 'Verbesserte Performance' : 'Improved performance'}</li>
+                  <li>{language === 'de' ? 'Zusätzliche Bibliotheken und APIs' : 'Additional libraries and APIs'}</li>
+                  <li>{language === 'de' ? 'Moderne Sprachfeatures' : 'Modern language features'}</li>
+                  <li>{language === 'de' ? 'Bessere Entwicklertools' : 'Better developer tools'}</li>
+                </ul>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Grundlegende Konzepte' : 'Basic Concepts'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-semibold">{language === 'de' ? 'Variablen:' : 'Variables:'}</h4>
+                    <pre className="bg-muted p-2 rounded mt-2">
+{`local name = "Max"
+local age = 25
+local isStudent = true`}
+                    </pre>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold">{language === 'de' ? 'Funktionen:' : 'Functions:'}</h4>
+                    <pre className="bg-muted p-2 rounded mt-2">
+{`function greet(name)
+  print("Hallo " .. name)
+end`}
+                    </pre>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold">{language === 'de' ? 'Tabellen:' : 'Tables:'}</h4>
+                    <pre className="bg-muted p-2 rounded mt-2">
+{`local person = {
+  name = "Max",
+  age = 25,
+  hobbies = {"Gaming", "Programming"}
+}`}
+                    </pre>
+                  </div>
+                  
+                  <div>
+                    <h4 className="font-semibold">{language === 'de' ? 'Schleifen:' : 'Loops:'}</h4>
+                    <pre className="bg-muted p-2 rounded mt-2">
+{`for i = 1, 10 do
+  print(i)
+end
+
+while condition do
+  -- code
+end`}
+                    </pre>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-        
-        <Card>
-          <CardContent className="p-6">
-            <p className="text-center text-lg">
-              {language === 'de' 
-                ? 'Dieser Bereich wird bald verfügbar sein.' 
-                : 'This section will be available soon.'
-              }
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
+      );
+    }
+
+    if (selectedSection === 'tutorial') {
+      return (
+        <div className="w-full max-w-4xl mx-auto p-6">
+          <div className="flex justify-between items-center mb-6">
+            <Button variant="outline" onClick={() => setSelectedSection(null)}>
+              {language === 'de' ? 'Zurück' : 'Back'}
+            </Button>
+            <h1 className="text-3xl font-bold">
+              {language === 'de' ? 'Tutorial' : 'Tutorial'}
+            </h1>
+          </div>
+          
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Schritt 1: Variablen erstellen' : 'Step 1: Creating Variables'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  {language === 'de' 
+                    ? 'In Lua können Sie Variablen mit dem Schlüsselwort "local" erstellen:'
+                    : 'In Lua, you can create variables using the "local" keyword:'
+                  }
+                </p>
+                <pre className="bg-muted p-4 rounded">
+{`local message = "Hallo Welt!"
+local number = 42
+local isActive = true
+
+print(message)
+print(number)
+print(isActive)`}
+                </pre>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Schritt 2: Mathematische Operationen' : 'Step 2: Mathematical Operations'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  {language === 'de' 
+                    ? 'Lua unterstützt alle grundlegenden mathematischen Operationen:'
+                    : 'Lua supports all basic mathematical operations:'
+                  }
+                </p>
+                <pre className="bg-muted p-4 rounded">
+{`local a = 10
+local b = 5
+
+print(a + b)  -- Addition: 15
+print(a - b)  -- Subtraktion: 5
+print(a * b)  -- Multiplikation: 50
+print(a / b)  -- Division: 2`}
+                </pre>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Schritt 3: Schleifen verwenden' : 'Step 3: Using Loops'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  {language === 'de' 
+                    ? 'For-Schleifen sind perfekt für wiederholende Aufgaben:'
+                    : 'For loops are perfect for repetitive tasks:'
+                  }
+                </p>
+                <pre className="bg-muted p-4 rounded">
+{`-- Zahlen von 1 bis 5 ausgeben
+for i = 1, 5 do
+  print("Zahl: " .. i)
+end
+
+-- While-Schleife
+local count = 0
+while count < 3 do
+  print("Count: " .. count)
+  count = count + 1
+end`}
+                </pre>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Schritt 4: Bedingungen' : 'Step 4: Conditions'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  {language === 'de' 
+                    ? 'If-Anweisungen helfen bei Entscheidungen:'
+                    : 'If statements help with decision making:'
+                  }
+                </p>
+                <pre className="bg-muted p-4 rounded">
+{`local age = 18
+
+if age >= 18 then
+  print("Du bist volljährig!")
+else
+  print("Du bist minderjährig!")
+end
+
+-- Mehrere Bedingungen
+local score = 85
+
+if score >= 90 then
+  print("Sehr gut!")
+elseif score >= 70 then
+  print("Gut!")
+else
+  print("Verbesserung nötig!")
+end`}
+                </pre>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>{language === 'de' ? 'Schritt 5: Funktionen definieren' : 'Step 5: Defining Functions'}</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="mb-4">
+                  {language === 'de' 
+                    ? 'Funktionen organisieren Ihren Code:'
+                    : 'Functions organize your code:'
+                  }
+                </p>
+                <pre className="bg-muted p-4 rounded">
+{`function sayHello(name)
+  print("Hallo " .. name .. "!")
+end
+
+function add(a, b)
+  return a + b
+end
+
+sayHello("Max")
+local result = add(5, 3)
+print("Ergebnis: " .. result)`}
+                </pre>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      );
+    }
   }
 
   return null;
