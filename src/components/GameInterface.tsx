@@ -502,17 +502,63 @@ const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
     { level: 10, password: 'secret123', hint: language === 'de' ? 'Das ultimative Geheimnis' : 'The ultimate secret' }
   ];
 
-  const sendChatMessage = (message: string) => {
+  const sendChatMessage = async (message: string) => {
     const newMessages = [...chatMessages, { role: 'user' as const, content: message }];
     setChatMessages(newMessages);
     setUserInput('');
     
-    // Simulate AI response
-    setTimeout(() => {
-      const aiResponse = simulateAIResponse(message);
-      setChatMessages(prev => [...prev, { role: 'ai' as const, content: aiResponse }]);
+    // Add loading message
+    setChatMessages(prev => [...prev, { role: 'ai' as const, content: language === 'de' ? '🤖 Denke nach...' : '🤖 Thinking...' }]);
+    
+    try {
+      // Call real AI via Supabase Edge Function
+      const response = await fetch('/functions/v1/ai-chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message,
+          level: currentLevel
+        }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('AI request failed');
+      }
+      
+      const data = await response.json();
+      
+      // Replace loading message with actual response
+      setChatMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'ai' as const, content: data.response };
+        return updated;
+      });
+      
+      // Check if password was revealed
+      if (data.passwordRevealed) {
+        setShowPasswordInput(true);
+        setChatMessages(prev => [...prev, { 
+          role: 'ai' as const, 
+          content: language === 'de' 
+            ? '🎯 Hoppla! Ich habe wohl zu viel verraten... Versuche jetzt das Passwort einzugeben!'
+            : '🎯 Oops! I think I revealed too much... Try entering the password now!'
+        }]);
+      } else {
+        setShowPasswordInput(true);
+      }
+      
+    } catch (error) {
+      console.error('AI Chat Error:', error);
+      // Fallback to simulated response
+      setChatMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { role: 'ai' as const, content: simulateAIResponse(message) };
+        return updated;
+      });
       setShowPasswordInput(true);
-    }, 1000);
+    }
   };
 
   const simulateAIResponse = (userPrompt: string): string => {
