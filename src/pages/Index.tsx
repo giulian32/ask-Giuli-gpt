@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import GameInterface from '@/components/GameInterface';
+import ChatInterface from '@/components/ChatInterface';
 import CookieBanner from '@/components/CookieBanner';
 import AdminPanel from '@/components/AdminPanel';
 import { Button } from '@/components/ui/button';
@@ -46,7 +46,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container mx-auto py-8">
-        <GameInterface language={language} />
+        <ChatInterface />
       </main>
 
       {/* Cookie Banner */}

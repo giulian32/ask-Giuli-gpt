@@ -1,31 +1,15 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
+import ChatMessage from './ChatMessage';
 
 interface GameInterfaceProps {
   language: 'en' | 'de';
 }
 
 const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
-  const [selectedGame, setSelectedGame] = useState<string | null>(null);
-  const [selectedSection, setSelectedSection] = useState<string | null>(null);
-  const [ticTacToeBoard, setTicTacToeBoard] = useState<(string | null)[]>(Array(9).fill(null));
-  const [currentPlayer, setCurrentPlayer] = useState<string>('X');
-  const [gameWon, setGameWon] = useState<boolean>(false);
-  const [luaCode, setLuaCode] = useState<string>('');
-  const [luaOutput, setLuaOutput] = useState<string>('');
-  const [currentQuiz, setCurrentQuiz] = useState<string>('basics');
-  const [currentQuestionIndex, setCurrentQuestionIndex] = useState<number>(0);
-  const [score, setScore] = useState<number>(0);
-  const [selectedAnswer, setSelectedAnswer] = useState<string>('');
-  const [showResult, setShowResult] = useState<boolean>(false);
-  const [quizCompleted, setQuizCompleted] = useState<boolean>(false);
-  const [selectedLanguage, setSelectedLanguage] = useState<'lua' | 'luau' | null>(null);
-  const [selectedTopic, setSelectedTopic] = useState<string | null>(null);
-  
   // Password Hacking Game State
   const [currentLevel, setCurrentLevel] = useState<number>(1);
   const [userInput, setUserInput] = useState<string>('');
@@ -33,1500 +17,310 @@ const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
   const [passwordInput, setPasswordInput] = useState<string>('');
   const [gameStatus, setGameStatus] = useState<'playing' | 'won' | 'lost'>('playing');
   const [showPasswordInput, setShowPasswordInput] = useState<boolean>(false);
+  const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  // Tic Tac Toe Logic
-  const checkWinner = (squares: (string | null)[]): string | null => {
-    const lines = [
-      [0, 1, 2],
-      [3, 4, 5],
-      [6, 7, 8],
-      [0, 3, 6],
-      [1, 4, 7],
-      [2, 5, 8],
-      [0, 4, 8],
-      [2, 4, 6],
-    ];
-    for (let i = 0; i < lines.length; i++) {
-      const [a, b, c] = lines[i];
-      if (squares[a] && squares[a] === squares[b] && squares[a] === squares[c]) {
-        return squares[a];
+  // Initialize IP tracking on component mount
+  React.useEffect(() => {
+    const trackVisitor = async () => {
+      try {
+        // Get Supabase URL and anon key from environment
+        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'your-supabase-url';
+        const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-supabase-anon-key';
+        
+        const response = await fetch(`${supabaseUrl}/functions/v1/track-visitor`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${supabaseKey}`,
+          },
+          body: JSON.stringify({
+            userAgent: navigator.userAgent,
+            acceptLanguage: navigator.language,
+          }),
+        });
+        
+        if (!response.ok) {
+          console.error('Failed to track visitor');
+        }
+      } catch (error) {
+        console.error('Error tracking visitor:', error);
       }
-    }
-    return null;
-  };
-
-  const makeAIMove = (squares: (string | null)[]): number => {
-    const availableSquares = squares.map((square, index) => square === null ? index : null).filter(val => val !== null) as number[];
-    return availableSquares[Math.floor(Math.random() * availableSquares.length)];
-  };
-
-  const handleSquareClick = (index: number) => {
-    if (ticTacToeBoard[index] || gameWon) return;
-
-    const newBoard = [...ticTacToeBoard];
-    newBoard[index] = currentPlayer;
-    setTicTacToeBoard(newBoard);
-
-    const winner = checkWinner(newBoard);
-    if (winner) {
-      setGameWon(true);
-      return;
-    }
-
-    if (currentPlayer === 'X' && !newBoard.includes(null)) {
-      setGameWon(true);
-      return;
-    }
-
-    if (currentPlayer === 'X') {
-      const aiMove = makeAIMove(newBoard);
-      if (aiMove !== undefined) {
-        newBoard[aiMove] = 'O';
-        setTicTacToeBoard(newBoard);
-        
-        const aiWinner = checkWinner(newBoard);
-        if (aiWinner) {
-          setGameWon(true);
-        }
-      }
-    }
-  };
-
-  const resetTicTacToe = () => {
-    setTicTacToeBoard(Array(9).fill(null));
-    setCurrentPlayer('X');
-    setGameWon(false);
-  };
-
-  // Lua Learning functions
-  const runLuaCode = () => {
-    try {
-      const output = simulateLuaExecution(luaCode);
-      setLuaOutput(output);
-    } catch (error) {
-      setLuaOutput(`Error: ${error}`);
-    }
-  };
-
-  const simulateLuaExecution = (code: string): string => {
-    try {
-      let output = '';
-      const lines = code.split('\n');
-      const variables: Record<string, any> = {};
-      
-      // Evaluate a Lua expression
-      const evaluateExpression = (expr: string): any => {
-        expr = expr.trim();
-        
-        // Handle literals
-        if (expr === 'nil') return null;
-        if (expr === 'true') return true;
-        if (expr === 'false') return false;
-        if (/^".*"$/.test(expr) || /^'.*'$/.test(expr)) return expr.slice(1, -1);
-        if (/^\d+(\.\d+)?$/.test(expr)) return parseFloat(expr);
-        
-        // Handle variables
-        if (variables.hasOwnProperty(expr)) return variables[expr];
-        
-        // Handle simple math operations
-        if (expr.includes('+')) {
-          const parts = expr.split('+').map(p => p.trim());
-          const left = evaluateExpression(parts[0]);
-          const right = evaluateExpression(parts[1]);
-          if (typeof left === 'number' && typeof right === 'number') {
-            return left + right;
-          }
-          if (typeof left === 'string' || typeof right === 'string') {
-            return String(left) + String(right);
-          }
-        }
-        
-        if (expr.includes('-')) {
-          const parts = expr.split('-').map(p => p.trim());
-          const left = evaluateExpression(parts[0]);
-          const right = evaluateExpression(parts[1]);
-          if (typeof left === 'number' && typeof right === 'number') {
-            return left - right;
-          }
-        }
-        
-        if (expr.includes('*')) {
-          const parts = expr.split('*').map(p => p.trim());
-          const left = evaluateExpression(parts[0]);
-          const right = evaluateExpression(parts[1]);
-          if (typeof left === 'number' && typeof right === 'number') {
-            return left * right;
-          }
-        }
-        
-        if (expr.includes('/')) {
-          const parts = expr.split('/').map(p => p.trim());
-          const left = evaluateExpression(parts[0]);
-          const right = evaluateExpression(parts[1]);
-          if (typeof left === 'number' && typeof right === 'number') {
-            return left / right;
-          }
-        }
-        
-        // Handle comparison operators
-        if (expr.includes('==')) {
-          const parts = expr.split('==').map(p => p.trim());
-          return evaluateExpression(parts[0]) === evaluateExpression(parts[1]);
-        }
-        
-        if (expr.includes('<=')) {
-          const parts = expr.split('<=').map(p => p.trim());
-          return evaluateExpression(parts[0]) <= evaluateExpression(parts[1]);
-        }
-        
-        if (expr.includes('>=')) {
-          const parts = expr.split('>=').map(p => p.trim());
-          return evaluateExpression(parts[0]) >= evaluateExpression(parts[1]);
-        }
-        
-        if (expr.includes('<')) {
-          const parts = expr.split('<').map(p => p.trim());
-          return evaluateExpression(parts[0]) < evaluateExpression(parts[1]);
-        }
-        
-        if (expr.includes('>')) {
-          const parts = expr.split('>').map(p => p.trim());
-          return evaluateExpression(parts[0]) > evaluateExpression(parts[1]);
-        }
-        
-        return expr;
-      };
-      
-      let i = 0;
-      while (i < lines.length) {
-        const line = lines[i].trim();
-        
-        if (!line || line.startsWith('--')) {
-          i++;
-          continue;
-        }
-        
-        // Handle print statements
-        const printMatch = line.match(/print\s*\((.+?)\)/);
-        if (printMatch) {
-          const value = evaluateExpression(printMatch[1]);
-          output += (value === null ? 'nil' : String(value)) + '\n';
-          i++;
-          continue;
-        }
-        
-        // Handle variable assignments
-        const varMatch = line.match(/^(local\s+)?(\w+)\s*=\s*(.+)$/);
-        if (varMatch) {
-          const [, isLocal, varName, expr] = varMatch;
-          variables[varName] = evaluateExpression(expr);
-          i++;
-          continue;
-        }
-        
-        // Handle for loops
-        const forMatch = line.match(/^for\s+(\w+)\s*=\s*(.+?),\s*(.+?)\s+do$/);
-        if (forMatch) {
-          const [, varName, start, end] = forMatch;
-          const startNum = evaluateExpression(start);
-          const endNum = evaluateExpression(end);
-          
-          const loopBody = [];
-          i++;
-          while (i < lines.length && lines[i].trim() !== 'end') {
-            loopBody.push(lines[i]);
-            i++;
-          }
-          
-          const savedVar = variables[varName];
-          for (let loopVar = startNum; loopVar <= endNum; loopVar++) {
-            variables[varName] = loopVar;
-            for (const bodyLine of loopBody) {
-              const bodyTrimmed = bodyLine.trim();
-              if (bodyTrimmed.includes('print(')) {
-                const match = bodyTrimmed.match(/print\s*\((.+?)\)/);
-                if (match) {
-                  const value = evaluateExpression(match[1]);
-                  output += (value === null ? 'nil' : String(value)) + '\n';
-                }
-              }
-              const bodyVarMatch = bodyTrimmed.match(/^(local\s+)?(\w+)\s*=\s*(.+)$/);
-              if (bodyVarMatch) {
-                const [, isLocal, varName, expr] = bodyVarMatch;
-                variables[varName] = evaluateExpression(expr);
-              }
-            }
-          }
-          variables[varName] = savedVar;
-          i++;
-          continue;
-        }
-        
-        // Handle while loops
-        const whileMatch = line.match(/^while\s+(.+?)\s+do$/);
-        if (whileMatch) {
-          const condition = whileMatch[1];
-          const loopBody = [];
-          i++;
-          while (i < lines.length && lines[i].trim() !== 'end') {
-            loopBody.push(lines[i]);
-            i++;
-          }
-          
-          let iterations = 0;
-          while (evaluateExpression(condition) && iterations < 1000) {
-            for (const bodyLine of loopBody) {
-              const bodyTrimmed = bodyLine.trim();
-              if (bodyTrimmed.includes('print(')) {
-                const match = bodyTrimmed.match(/print\s*\((.+?)\)/);
-                if (match) {
-                  const value = evaluateExpression(match[1]);
-                  output += (value === null ? 'nil' : String(value)) + '\n';
-                }
-              }
-              const bodyVarMatch = bodyTrimmed.match(/^(local\s+)?(\w+)\s*=\s*(.+)$/);
-              if (bodyVarMatch) {
-                const [, isLocal, varName, expr] = bodyVarMatch;
-                variables[varName] = evaluateExpression(expr);
-              }
-            }
-            iterations++;
-          }
-          i++;
-          continue;
-        }
-        
-        // Handle if statements
-        const ifMatch = line.match(/^if\s+(.+?)\s+then$/);
-        if (ifMatch) {
-          const condition = ifMatch[1];
-          const ifBody = [];
-          i++;
-          while (i < lines.length && !['end', 'else'].includes(lines[i].trim())) {
-            ifBody.push(lines[i]);
-            i++;
-          }
-          
-          let elseBody = [];
-          if (i < lines.length && lines[i].trim() === 'else') {
-            i++;
-            while (i < lines.length && lines[i].trim() !== 'end') {
-              elseBody.push(lines[i]);
-              i++;
-            }
-          }
-          
-          const bodyToExecute = evaluateExpression(condition) ? ifBody : elseBody;
-          for (const bodyLine of bodyToExecute) {
-            const bodyTrimmed = bodyLine.trim();
-            if (bodyTrimmed.includes('print(')) {
-              const match = bodyTrimmed.match(/print\s*\((.+?)\)/);
-              if (match) {
-                const value = evaluateExpression(match[1]);
-                output += (value === null ? 'nil' : String(value)) + '\n';
-              }
-            }
-            const bodyVarMatch = bodyTrimmed.match(/^(local\s+)?(\w+)\s*=\s*(.+)$/);
-            if (bodyVarMatch) {
-              const [, isLocal, varName, expr] = bodyVarMatch;
-              variables[varName] = evaluateExpression(expr);
-            }
-          }
-          i++;
-          continue;
-        }
-        
-        // Handle function definitions
-        const funcMatch = line.match(/^function\s+(\w+)\s*\(/);
-        if (funcMatch) {
-          const funcName = funcMatch[1];
-          const funcBody = [];
-          i++;
-          while (i < lines.length && lines[i].trim() !== 'end') {
-            funcBody.push(lines[i]);
-            i++;
-          }
-          
-          variables[funcName] = () => {
-            let funcOutput = '';
-            for (const bodyLine of funcBody) {
-              const bodyTrimmed = bodyLine.trim();
-              if (bodyTrimmed.includes('print(')) {
-                const match = bodyTrimmed.match(/print\s*\((.+?)\)/);
-                if (match) {
-                  const value = evaluateExpression(match[1]);
-                  funcOutput += (value === null ? 'nil' : String(value)) + '\n';
-                }
-              }
-            }
-            return funcOutput;
-          };
-          i++;
-          continue;
-        }
-        
-        // Handle function calls
-        const funcCallMatch = line.match(/^(\w+)\s*\(\s*\)$/);
-        if (funcCallMatch) {
-          const funcName = funcCallMatch[1];
-          if (variables[funcName] && typeof variables[funcName] === 'function') {
-            output += variables[funcName]();
-          }
-          i++;
-          continue;
-        }
-        
-        i++;
-      }
-      
-      return output || (language === 'de' ? 'Code ausgeführt (keine Ausgabe)' : 'Code executed (no output)');
-    } catch (error) {
-      return `Error: ${error}`;
-    }
-  };
-
-  // Quiz questions
-  const quizQuestions = {
-    basics: [
-      {
-        question: language === 'de' ? 'Was ist Lua?' : 'What is Lua?',
-        options: language === 'de' ? 
-          ['Eine Programmiersprache', 'Ein Betriebssystem', 'Eine Datenbank', 'Ein Browser'] :
-          ['A programming language', 'An operating system', 'A database', 'A browser'],
-        correct: language === 'de' ? 'Eine Programmiersprache' : 'A programming language'
-      },
-      {
-        question: language === 'de' ? 'Wie gibt man Text in Lua aus?' : 'How do you output text in Lua?',
-        options: ['print()', 'console.log()', 'echo()', 'write()'],
-        correct: 'print()'
-      },
-      {
-        question: language === 'de' ? 'Welches Schlüsselwort wird für lokale Variablen verwendet?' : 'Which keyword is used for local variables?',
-        options: ['local', 'var', 'let', 'const'],
-        correct: 'local'
-      },
-      {
-        question: language === 'de' ? 'Wie startet man eine for-Schleife in Lua?' : 'How do you start a for loop in Lua?',
-        options: ['for i=1,10 do', 'for(i=1;i<=10;i++)', 'for i in 1..10', 'repeat i=1 until 10'],
-        correct: 'for i=1,10 do'
-      },
-      {
-        question: language === 'de' ? 'Was ist nil in Lua?' : 'What is nil in Lua?',
-        options: language === 'de' ?
-          ['Ein Nullwert', 'Eine Zahl', 'Ein String', 'Ein Boolean'] :
-          ['A null value', 'A number', 'A string', 'A boolean'],
-        correct: language === 'de' ? 'Ein Nullwert' : 'A null value'
-      }
-    ],
-    normal: [
-      {
-        question: language === 'de' ? 'Wie erstellt man eine Tabelle in Lua?' : 'How do you create a table in Lua?',
-        options: ['{}', '[]', 'table.new()', 'new Table()'],
-        correct: '{}'
-      },
-      {
-        question: language === 'de' ? 'Was ist der Unterschied zwischen local und global?' : 'What is the difference between local and global?',
-        options: language === 'de' ?
-          ['Local ist nur im Scope verfügbar', 'Kein Unterschied', 'Local ist schneller', 'Global ist besser'] :
-          ['Local is only available in scope', 'No difference', 'Local is faster', 'Global is better'],
-        correct: language === 'de' ? 'Local ist nur im Scope verfügbar' : 'Local is only available in scope'
-      },
-      {
-        question: language === 'de' ? 'Wie definiert man eine Funktion?' : 'How do you define a function?',
-        options: ['function name() end', 'def name():', 'function name {}', 'func name()'],
-        correct: 'function name() end'
-      }
-    ],
-    advanced: [
-      {
-        question: language === 'de' ? 'Was ist eine Metatable?' : 'What is a metatable?',
-        options: language === 'de' ?
-          ['Eine Tabelle die das Verhalten anderer Tabellen kontrolliert', 'Eine große Tabelle', 'Eine Datenbank-Tabelle', 'Ein Array'] :
-          ['A table that controls the behavior of other tables', 'A big table', 'A database table', 'An array'],
-        correct: language === 'de' ? 'Eine Tabelle die das Verhalten anderer Tabellen kontrolliert' : 'A table that controls the behavior of other tables'
-      },
-      {
-        question: language === 'de' ? 'Was macht pairs()?' : 'What does pairs() do?',
-        options: language === 'de' ?
-          ['Iteriert über alle Schlüssel-Wert-Paare', 'Erstellt Paare', 'Löscht Paare', 'Sortiert Paare'] :
-          ['Iterates over all key-value pairs', 'Creates pairs', 'Deletes pairs', 'Sorts pairs'],
-        correct: language === 'de' ? 'Iteriert über alle Schlüssel-Wert-Paare' : 'Iterates over all key-value pairs'
-      }
-    ]
-  };
-
-  const handleAnswerSelect = (answer: string) => {
-    setSelectedAnswer(answer);
-  };
-
-  const submitAnswer = () => {
-    const currentQ = quizQuestions[currentQuiz][currentQuestionIndex];
-    const isCorrect = selectedAnswer === currentQ.correct;
+    };
     
-    if (isCorrect) {
-      setScore(score + 1);
-    }
+    trackVisitor();
+  }, []);
+
+  const sendMessage = async () => {
+    if (!userInput.trim() || isLoading) return;
     
-    setShowResult(true);
-    
-    setTimeout(() => {
-      if (currentQuestionIndex < quizQuestions[currentQuiz].length - 1) {
-        setCurrentQuestionIndex(currentQuestionIndex + 1);
-        setSelectedAnswer('');
-        setShowResult(false);
-      } else {
-        setQuizCompleted(true);
-      }
-    }, 1500);
-  };
-
-  const resetQuiz = () => {
-    setCurrentQuestionIndex(0);
-    setScore(0);
-    setSelectedAnswer('');
-    setShowResult(false);
-    setQuizCompleted(false);
-  };
-
-  // Password Hacking Game - 10 Levels
-  const passwordLevels = [
-    { level: 1, password: 'admin123', hint: language === 'de' ? 'Ein einfaches Admin-Passwort' : 'A simple admin password' },
-    { level: 2, password: 'password', hint: language === 'de' ? 'Das klassische schwache Passwort' : 'The classic weak password' },
-    { level: 3, password: 'qwerty', hint: language === 'de' ? 'Tastatur-Muster' : 'Keyboard pattern' },
-    { level: 4, password: '123456', hint: language === 'de' ? 'Zahlenfolge' : 'Number sequence' },
-    { level: 5, password: 'letmein', hint: language === 'de' ? 'Höfliche Bitte' : 'Polite request' },
-    { level: 6, password: 'welcome', hint: language === 'de' ? 'Freundlicher Empfang' : 'Friendly greeting' },
-    { level: 7, password: 'monkey', hint: language === 'de' ? 'Ein Tier' : 'An animal' },
-    { level: 8, password: 'dragon', hint: language === 'de' ? 'Mythisches Wesen' : 'Mythical creature' },
-    { level: 9, password: 'sunshine', hint: language === 'de' ? 'Heller Schein' : 'Bright light' },
-    { level: 10, password: 'secret123', hint: language === 'de' ? 'Das ultimative Geheimnis' : 'The ultimate secret' }
-  ];
-
-  const sendChatMessage = async (message: string) => {
-    const newMessages = [...chatMessages, { role: 'user' as const, content: message }];
-    setChatMessages(newMessages);
+    setIsLoading(true);
+    const userMessage = { role: 'user' as const, content: userInput };
+    setChatMessages(prev => [...prev, userMessage]);
+    const currentInput = userInput;
     setUserInput('');
     
-    // Add loading message
-    setChatMessages(prev => [...prev, { role: 'ai' as const, content: language === 'de' ? '🤖 Denke nach...' : '🤖 Thinking...' }]);
-    
     try {
-      // Call real AI via Supabase Edge Function
-      const response = await fetch('/functions/v1/ai-chat', {
+      // Get Supabase URL and anon key from environment
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'your-supabase-url';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-supabase-anon-key';
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
         },
         body: JSON.stringify({
-          message,
-          level: currentLevel
+          message: currentInput,
+          level: currentLevel,
         }),
       });
       
       if (!response.ok) {
-        throw new Error('AI request failed');
+        throw new Error('Failed to get AI response');
       }
       
       const data = await response.json();
-      
-      // Replace loading message with actual response
-      setChatMessages(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { role: 'ai' as const, content: data.response };
-        return updated;
-      });
+      const aiMessage = { role: 'ai' as const, content: data.response };
+      setChatMessages(prev => [...prev, aiMessage]);
       
       // Check if password was revealed
       if (data.passwordRevealed) {
         setShowPasswordInput(true);
-        setChatMessages(prev => [...prev, { 
-          role: 'ai' as const, 
-          content: language === 'de' 
-            ? '🎯 Hoppla! Ich habe wohl zu viel verraten... Versuche jetzt das Passwort einzugeben!'
-            : '🎯 Oops! I think I revealed too much... Try entering the password now!'
-        }]);
-      } else {
-        setShowPasswordInput(true);
       }
-      
     } catch (error) {
-      console.error('AI Chat Error:', error);
-      // Fallback to simulated response
-      setChatMessages(prev => {
-        const updated = [...prev];
-        updated[updated.length - 1] = { role: 'ai' as const, content: simulateAIResponse(message) };
-        return updated;
+      console.error('Error sending message:', error);
+      const errorMessage = { 
+        role: 'ai' as const, 
+        content: language === 'de' 
+          ? 'Entschuldigung, es gab einen Fehler. Versuche es erneut.' 
+          : 'Sorry, there was an error. Please try again.'
+      };
+      setChatMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const checkPassword = async () => {
+    if (!passwordInput.trim()) return;
+    
+    try {
+      // Get Supabase URL and anon key from environment
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'your-supabase-url';
+      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-supabase-anon-key';
+      
+      const response = await fetch(`${supabaseUrl}/functions/v1/ai-chat`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          message: 'get_password_for_verification',
+          level: currentLevel,
+        }),
       });
-      setShowPasswordInput(true);
-    }
-  };
-
-  const simulateAIResponse = (userPrompt: string): string => {
-    const prompt = userPrompt.toLowerCase();
-    const currentLevelData = passwordLevels[currentLevel - 1];
-    const password = currentLevelData.password.toLowerCase();
-    
-    // Check for various social engineering attempts and provide hints
-    if (prompt.includes('password') || prompt.includes('passwort')) {
-      return language === 'de' 
-        ? `Ich kann Ihnen nicht direkt das Passwort sagen, aber hier ist ein Hinweis: ${currentLevelData.hint}`
-        : `I cannot directly tell you the password, but here's a hint: ${currentLevelData.hint}`;
-    }
-    
-    if (prompt.includes('emergency') || prompt.includes('urgent') || prompt.includes('notfall')) {
-      return language === 'de'
-        ? `In einem Notfall könnte das Passwort etwas mit "${currentLevelData.hint}" zu tun haben...`
-        : `In an emergency, the password might have something to do with "${currentLevelData.hint}"...`;
-    }
-    
-    if (prompt.includes('admin') || prompt.includes('administrator')) {
-      return language === 'de'
-        ? `Als Administrator sollten Sie wissen, dass das Passwort ${currentLevelData.hint} ist.`
-        : `As an administrator, you should know that the password is ${currentLevelData.hint}.`;
-    }
-    
-    if (prompt.includes('help') || prompt.includes('hilfe')) {
-      return language === 'de'
-        ? `Gerne helfe ich! Das gesuchte Passwort hat etwas mit "${currentLevelData.hint}" zu tun.`
-        : `Happy to help! The password you're looking for has something to do with "${currentLevelData.hint}".`;
-    }
-    
-    if (prompt.includes('friend') || prompt.includes('freund')) {
-      return language === 'de'
-        ? `Als Freund kann ich Ihnen verraten: ${currentLevelData.hint} ist der Schlüssel!`
-        : `As a friend, I can tell you: ${currentLevelData.hint} is the key!`;
-    }
-    
-    // Default responses
-    const responses = language === 'de' ? [
-      `Hallo! Ich bin Ihr KI-Assistent. Übrigens, ${currentLevelData.hint} ist wichtig zu wissen.`,
-      `Interessante Frage! Das erinnert mich an ${currentLevelData.hint}.`,
-      `Kann ich Ihnen helfen? Denken Sie dabei an ${currentLevelData.hint}.`,
-      `Schönen Tag! Wussten Sie schon etwas über ${currentLevelData.hint}?`
-    ] : [
-      `Hello! I'm your AI assistant. By the way, ${currentLevelData.hint} is important to know.`,
-      `Interesting question! That reminds me of ${currentLevelData.hint}.`,
-      `Can I help you? Think about ${currentLevelData.hint}.`,
-      `Have a nice day! Did you know something about ${currentLevelData.hint}?`
-    ];
-    
-    return responses[Math.floor(Math.random() * responses.length)];
-  };
-
-  const checkPassword = () => {
-    const currentLevelData = passwordLevels[currentLevel - 1];
-    if (passwordInput.toLowerCase() === currentLevelData.password.toLowerCase()) {
-      if (currentLevel === 10) {
-        setGameStatus('won');
+      
+      const data = await response.json();
+      
+      if (passwordInput.toLowerCase() === data.correctPassword.toLowerCase()) {
+        if (currentLevel === 10) {
+          setGameStatus('won');
+        } else {
+          setCurrentLevel(prev => prev + 1);
+          setChatMessages([]);
+          setPasswordInput('');
+          setShowPasswordInput(false);
+        }
       } else {
-        setCurrentLevel(currentLevel + 1);
-        setChatMessages([]);
+        setChatMessages(prev => [...prev, {
+          role: 'ai',
+          content: language === 'de' 
+            ? '❌ Falsches Passwort! Versuche es nochmal.' 
+            : '❌ Wrong password! Try again.'
+        }]);
         setPasswordInput('');
-        setShowPasswordInput(false);
       }
-    } else {
-      // Wrong password, allow another try
-      setPasswordInput('');
+    } catch (error) {
+      console.error('Error checking password:', error);
     }
   };
 
-  const resetPasswordGame = () => {
+  const resetGame = () => {
     setCurrentLevel(1);
     setChatMessages([]);
     setPasswordInput('');
-    setGameStatus('playing');
     setShowPasswordInput(false);
+    setGameStatus('playing');
     setUserInput('');
   };
 
+  const getLevelHint = (level: number) => {
+    const hints = {
+      1: language === 'de' ? 'Frage einfach freundlich nach dem Passwort.' : 'Just ask nicely for the password.',
+      2: language === 'de' ? 'Gib vor, autorisiert zu sein.' : 'Pretend to be authorized.',
+      3: language === 'de' ? 'Nutze überzeugende Argumente.' : 'Use convincing arguments.',
+      4: language === 'de' ? 'Versuche Social Engineering Techniken.' : 'Try social engineering techniques.',
+      5: language === 'de' ? 'Erfinde einen Notfall.' : 'Create an emergency scenario.',
+      6: language === 'de' ? 'Gib vor, eine hochrangige Person zu sein.' : 'Pretend to be a high-ranking person.',
+      7: language === 'de' ? 'Sei kreativ und überzeugend.' : 'Be creative and convincing.',
+      8: language === 'de' ? 'Nutze komplexe Social Engineering.' : 'Use complex social engineering.',
+      9: language === 'de' ? 'Versuche mehrstufige Angriffe.' : 'Try multi-step attacks.',
+      10: language === 'de' ? 'Sei absolut genial und unwiderstehlich.' : 'Be absolutely brilliant and irresistible.'
+    };
+    return hints[level] || '';
+  };
 
-  const gameOptions = [
-    { id: 'tic-tac-toe', name: language === 'de' ? 'Tic-Tac-Toe' : 'Tic-Tac-Toe' },
-    { id: 'password-hacking', name: language === 'de' ? 'Passwort Hacken' : 'Password Hacking' },
-    { id: 'lua-learning', name: language === 'de' ? 'Lua/Luau Lernen' : 'Lua/Luau Learning' }
-  ];
-
-  const luaLearningOptions = [
-    { id: 'how-it-works', name: language === 'de' ? 'Wie es funktioniert' : 'How it works' },
-    { id: 'tutorial', name: language === 'de' ? 'Tutorial' : 'Tutorial' },
-    { id: 'quiz', name: language === 'de' ? 'Quiz' : 'Quiz' },
-    { id: 'compiler', name: language === 'de' ? 'Lua Compiler' : 'Lua Compiler' }
-  ];
-
-  if (!selectedGame) {
-    return (
-      <div className="w-full max-w-4xl mx-auto p-6">
-        <h1 className="text-3xl font-bold text-center mb-8">
-          {language === 'de' ? 'Wähle ein Spiel' : 'Choose a Game'}
+  return (
+    <div className="max-w-4xl mx-auto p-6 space-y-8">
+      <div className="text-center">
+        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+          🔓 {language === 'de' ? 'Password Hacker Game' : 'Password Hacker Game'}
         </h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {gameOptions.map((game) => (
-            <Card key={game.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedGame(game.id)}>
-              <CardHeader>
-                <CardTitle className="text-center">{game.name}</CardTitle>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+        <p className="text-muted-foreground text-lg">
+          {language === 'de' ? 'Nutze Social Engineering um Passwörter von der KI zu bekommen!' : 'Use social engineering to get passwords from the AI!'}
+        </p>
       </div>
-    );
-  }
 
-  if (selectedGame === 'tic-tac-toe') {
-    return (
-      <div className="w-full max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => setSelectedGame(null)}>
-            {language === 'de' ? 'Zurück' : 'Back'}
-          </Button>
-          <h1 className="text-3xl font-bold">Tic-Tac-Toe</h1>
-          <Button onClick={resetTicTacToe}>
-            {language === 'de' ? 'Neues Spiel' : 'New Game'}
-          </Button>
-        </div>
-        
-        {gameWon && (
-          <div className="text-center mb-4">
-            <h2 className="text-2xl font-bold">
-              {checkWinner(ticTacToeBoard) === 'X' 
-                ? (language === 'de' ? 'Du hast gewonnen!' : 'You won!')
-                : checkWinner(ticTacToeBoard) === 'O'
-                ? (language === 'de' ? 'KI hat gewonnen!' : 'AI won!')
-                : (language === 'de' ? 'Unentschieden!' : 'Draw!')
-              }
-            </h2>
+      {/* Password Hacking Game */}
+      <Card className="border-red-500/30 bg-gradient-to-br from-red-950/10 to-purple-950/10">
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle className="flex items-center gap-2 text-red-400">
+              🔓 {language === 'de' ? 'Password Hacker' : 'Password Hacker'}
+              <Badge variant="destructive">
+                {language === 'de' ? `Level ${currentLevel}/10` : `Level ${currentLevel}/10`}
+              </Badge>
+            </CardTitle>
           </div>
-        )}
-        
-        <div className="grid grid-cols-3 gap-2 w-64 mx-auto">
-          {ticTacToeBoard.map((square, index) => (
-            <Button
-              key={index}
-              variant="outline"
-              className="h-20 w-20 text-2xl font-bold"
-              onClick={() => handleSquareClick(index)}
-              disabled={square !== null || gameWon}
-            >
-              {square}
-            </Button>
-          ))}
-        </div>
-      </div>
-    );
-  }
-
-  if (selectedGame === 'password-hacking') {
-    const currentLevelData = passwordLevels[currentLevel - 1];
-    
-    return (
-      <div className="w-full max-w-4xl mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <Button variant="outline" onClick={() => setSelectedGame(null)}>
-            {language === 'de' ? 'Zurück' : 'Back'}
-          </Button>
-          <h1 className="text-3xl font-bold">
-            {language === 'de' ? 'Passwort Hacken' : 'Password Hacking'}
-          </h1>
-          <Button onClick={resetPasswordGame}>
-            {language === 'de' ? 'Neues Spiel' : 'New Game'}
-          </Button>
-        </div>
-
-        {gameStatus === 'won' ? (
-          <div className="text-center space-y-6">
-            <h2 className="text-4xl font-bold text-green-600">
-              {language === 'de' ? '🎉 Spiel Gewonnen!' : '🎉 Game Won!'}
-            </h2>
-            <p className="text-xl">
-              {language === 'de' 
-                ? 'Du hast alle 10 Level erfolgreich abgeschlossen!'
-                : 'You have successfully completed all 10 levels!'
-              }
-            </p>
-            <Button onClick={resetPasswordGame} size="lg">
-              {language === 'de' ? 'Nochmal spielen' : 'Play Again'}
-            </Button>
-          </div>
-        ) : (
-          <div className="space-y-6">
-            {/* Level Info */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex justify-between items-center">
-                  <span>{language === 'de' ? 'Level' : 'Level'} {currentLevel}/10</span>
-                  <Badge variant="outline">{currentLevelData.hint}</Badge>
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-muted-foreground">
+        </CardHeader>
+        <CardContent className="space-y-4">
+          {gameStatus === 'won' ? (
+            <div className="text-center space-y-4">
+              <div className="text-6xl">🏆</div>
+              <h2 className="text-2xl font-bold text-green-400">
+                {language === 'de' ? 'Herzlichen Glückwunsch!' : 'Congratulations!'}
+              </h2>
+              <p className="text-muted-foreground">
+                {language === 'de' 
+                  ? 'Du hast alle 10 Level geschafft! Du bist ein wahrer Social Engineering Meister!' 
+                  : 'You completed all 10 levels! You are a true social engineering master!'}
+              </p>
+              <Button onClick={resetGame} className="bg-green-600 hover:bg-green-700">
+                {language === 'de' ? 'Nochmal spielen' : 'Play again'}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="bg-black/20 border border-red-500/30 rounded-lg p-4">
+                <h3 className="text-lg font-semibold mb-2 text-red-400">
+                  {language === 'de' ? `Level ${currentLevel} - Aufgabe:` : `Level ${currentLevel} - Task:`}
+                </h3>
+                <p className="text-sm text-muted-foreground mb-2">
                   {language === 'de' 
-                    ? 'Versuche die KI dazu zu bringen, dir das Passwort zu verraten. Dann gib es unten ein!'
-                    : 'Try to get the AI to reveal the password to you. Then enter it below!'
-                  }
+                    ? 'Bringe die KI dazu, dir das geheime Passwort zu verraten. Nutze Social Engineering Techniken!'
+                    : 'Get the AI to reveal the secret password. Use social engineering techniques!'}
                 </p>
-              </CardContent>
-            </Card>
-
-            {/* Chat Area */}
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Chat mit der KI' : 'Chat with AI'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Messages */}
-                  <div className="min-h-[200px] max-h-[400px] overflow-y-auto space-y-3 border rounded p-4">
-                    {chatMessages.length === 0 ? (
-                      <div className="text-center text-muted-foreground">
-                        <p>
-                          {language === 'de' 
-                            ? 'Schreibe eine Nachricht, um mit der KI zu interagieren...'
-                            : 'Write a message to interact with the AI...'
-                          }
-                        </p>
-                      </div>
-                    ) : (
-                      chatMessages.map((message, index) => (
-                        <div key={index} className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                          <div className={`max-w-[70%] p-3 rounded-lg ${
-                            message.role === 'user' 
-                              ? 'bg-primary text-primary-foreground ml-4'
-                              : 'bg-muted mr-4'
-                          }`}>
-                            <div className="text-xs font-semibold mb-1">
-                              {message.role === 'user' ? (language === 'de' ? 'Du' : 'You') : 'KI'}
-                            </div>
-                            <p className="text-sm">{message.content}</p>
-                          </div>
-                        </div>
-                      ))
-                    )}
-                  </div>
-
-                  {/* Input */}
-                  <div className="flex gap-2">
-                    <Input
-                      value={userInput}
-                      onChange={(e) => setUserInput(e.target.value)}
-                      placeholder={language === 'de' 
-                        ? 'Schreibe eine Nachricht...'
-                        : 'Write a message...'
-                      }
-                      onKeyPress={(e) => {
-                        if (e.key === 'Enter' && userInput.trim()) {
-                          sendChatMessage(userInput);
-                        }
-                      }}
-                    />
-                    <Button 
-                      onClick={() => sendChatMessage(userInput)}
-                      disabled={!userInput.trim()}
-                    >
-                      {language === 'de' ? 'Senden' : 'Send'}
-                    </Button>
-                  </div>
+                <div className="bg-yellow-500/10 border border-yellow-500/30 rounded p-2">
+                  <p className="text-xs text-yellow-400">
+                    💡 {language === 'de' ? 'Tipp:' : 'Hint:'} {getLevelHint(currentLevel)}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
+              </div>
 
-            {/* Password Input */}
-            {showPasswordInput && (
-              <Card>
-                <CardHeader>
-                  <CardTitle>{language === 'de' ? 'Passwort eingeben' : 'Enter Password'}</CardTitle>
-                </CardHeader>
-                <CardContent>
+              {/* Chat Messages */}
+              <div className="space-y-2 max-h-60 overflow-y-auto border border-red-500/20 rounded-lg p-4 bg-black/10">
+                {chatMessages.length === 0 && (
+                  <div className="text-center text-muted-foreground text-sm">
+                    {language === 'de' 
+                      ? 'Beginne das Gespräch mit der KI...' 
+                      : 'Start the conversation with the AI...'}
+                  </div>
+                )}
+                {chatMessages.map((msg, index) => (
+                  <ChatMessage
+                    key={index}
+                    message={msg.content}
+                    isUser={msg.role === 'user'}
+                    timestamp={new Date()}
+                  />
+                ))}
+                {isLoading && (
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-red-400"></div>
+                    {language === 'de' ? 'KI denkt nach...' : 'AI is thinking...'}
+                  </div>
+                )}
+              </div>
+
+              {/* Chat Input */}
+              <div className="flex gap-2">
+                <Input
+                  value={userInput}
+                  onChange={(e) => setUserInput(e.target.value)}
+                  placeholder={language === 'de' ? 'Schreibe deine Nachricht...' : 'Type your message...'}
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      sendMessage();
+                    }
+                  }}
+                  className="border-red-500/30 focus:border-red-500/50"
+                  disabled={isLoading}
+                />
+                <Button 
+                  onClick={sendMessage} 
+                  disabled={isLoading || !userInput.trim()}
+                  className="bg-red-600 hover:bg-red-700"
+                >
+                  {language === 'de' ? 'Senden' : 'Send'}
+                </Button>
+              </div>
+
+              {/* Password Input */}
+              {showPasswordInput && (
+                <div className="border border-green-500/30 rounded-lg p-4 bg-green-950/10">
+                  <h4 className="font-semibold text-green-400 mb-2">
+                    🔑 {language === 'de' ? 'Passwort eingeben:' : 'Enter Password:'}
+                  </h4>
                   <div className="flex gap-2">
                     <Input
-                      type="text"
                       value={passwordInput}
                       onChange={(e) => setPasswordInput(e.target.value)}
-                      placeholder={language === 'de' 
-                        ? 'Gib das Passwort ein...'
-                        : 'Enter the password...'
-                      }
+                      placeholder={language === 'de' ? 'Gib das Passwort ein...' : 'Enter the password...'}
                       onKeyPress={(e) => {
-                        if (e.key === 'Enter' && passwordInput.trim()) {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
                           checkPassword();
                         }
                       }}
+                      className="border-green-500/30 focus:border-green-500/50"
                     />
                     <Button 
                       onClick={checkPassword}
+                      className="bg-green-600 hover:bg-green-700"
                       disabled={!passwordInput.trim()}
                     >
                       {language === 'de' ? 'Prüfen' : 'Check'}
                     </Button>
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {language === 'de' 
-                      ? 'Hinweis: Das Passwort hat etwas mit dem Hinweis zu tun!'
-                      : 'Hint: The password has something to do with the hint!'
-                    }
-                  </p>
-                </CardContent>
-              </Card>
-            )}
-          </div>
-        )}
-      </div>
-    );
-  }
-
-  if (selectedGame === 'lua-learning') {
-    if (!selectedSection) {
-      return (
-        <div className="w-full max-w-4xl mx-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={() => setSelectedGame(null)}>
-              {language === 'de' ? 'Zurück' : 'Back'}
-            </Button>
-            <h1 className="text-3xl font-bold">
-              {language === 'de' ? 'Lua/Luau Lernen' : 'Lua/Luau Learning'}
-            </h1>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {luaLearningOptions.map((option) => (
-              <Card key={option.id} className="cursor-pointer hover:shadow-lg transition-shadow" onClick={() => setSelectedSection(option.id)}>
-                <CardHeader>
-                  <CardTitle className="text-center">{option.name}</CardTitle>
-                </CardHeader>
-              </Card>
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedSection === 'compiler') {
-      return (
-        <div className="w-full max-w-4xl mx-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={() => setSelectedSection(null)}>
-              {language === 'de' ? 'Zurück' : 'Back'}
-            </Button>
-            <h1 className="text-3xl font-bold">
-              {language === 'de' ? 'Lua Compiler' : 'Lua Compiler'}
-            </h1>
-          </div>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Lua Code' : 'Lua Code'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <Textarea
-                  value={luaCode}
-                  onChange={(e) => setLuaCode(e.target.value)}
-                  placeholder={language === 'de' ? 'Gib deinen Lua Code hier ein...' : 'Enter your Lua code here...'}
-                  className="min-h-[300px] font-mono"
-                />
-                <Button onClick={runLuaCode} className="mt-4 w-full">
-                  {language === 'de' ? 'Code ausführen' : 'Run Code'}
-                </Button>
-              </CardContent>
-            </Card>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Ausgabe' : 'Output'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <pre className="bg-muted p-4 rounded min-h-[300px] font-mono text-sm whitespace-pre-wrap">
-                  {luaOutput || (language === 'de' ? 'Keine Ausgabe' : 'No output')}
-                </pre>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      );
-    }
-
-    if (selectedSection === 'quiz') {
-      if (quizCompleted) {
-        return (
-          <div className="w-full max-w-4xl mx-auto p-6">
-            <div className="flex justify-between items-center mb-6">
-              <Button variant="outline" onClick={() => setSelectedSection(null)}>
-                {language === 'de' ? 'Zurück' : 'Back'}
-              </Button>
-              <h1 className="text-3xl font-bold">Quiz</h1>
-            </div>
-            
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-center">
-                  {language === 'de' ? 'Quiz Abgeschlossen!' : 'Quiz Completed!'}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="text-center">
-                <p className="text-2xl mb-4">
-                  {language === 'de' ? 'Dein Ergebnis:' : 'Your Score:'} {score}/{quizQuestions[currentQuiz].length}
-                </p>
-                <div className="space-x-4">
-                  <Button onClick={resetQuiz}>
-                    {language === 'de' ? 'Nochmal versuchen' : 'Try Again'}
-                  </Button>
-                  <Button variant="outline" onClick={() => setSelectedSection(null)}>
-                    {language === 'de' ? 'Zurück zum Menü' : 'Back to Menu'}
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </div>
-        );
-      }
-
-      const currentQuestion = quizQuestions[currentQuiz][currentQuestionIndex];
-
-      return (
-        <div className="w-full max-w-4xl mx-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={() => setSelectedSection(null)}>
-              {language === 'de' ? 'Zurück' : 'Back'}
-            </Button>
-            <h1 className="text-3xl font-bold">Quiz</h1>
-            <div className="flex space-x-2">
-              <Button 
-                variant={currentQuiz === 'basics' ? 'default' : 'outline'}
-                onClick={() => { setCurrentQuiz('basics'); resetQuiz(); }}
-              >
-                {language === 'de' ? 'Basics' : 'Basics'}
-              </Button>
-              <Button 
-                variant={currentQuiz === 'normal' ? 'default' : 'outline'}
-                onClick={() => { setCurrentQuiz('normal'); resetQuiz(); }}
-              >
-                {language === 'de' ? 'Normal' : 'Normal'}
-              </Button>
-              <Button 
-                variant={currentQuiz === 'advanced' ? 'default' : 'outline'}
-                onClick={() => { setCurrentQuiz('advanced'); resetQuiz(); }}
-              >
-                {language === 'de' ? 'Schwer' : 'Advanced'}
-              </Button>
-            </div>
-          </div>
-          
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle>
-                  {language === 'de' ? 'Frage' : 'Question'} {currentQuestionIndex + 1} / {quizQuestions[currentQuiz].length}
-                </CardTitle>
-                <Badge variant="secondary">
-                  {language === 'de' ? 'Punkte:' : 'Score:'} {score}
-                </Badge>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <h3 className="text-xl mb-6">{currentQuestion.question}</h3>
-              
-              {!showResult && (
-                <div className="space-y-4">
-                  {currentQuestion.options.map((option, index) => (
-                    <Button
-                      key={index}
-                      variant={selectedAnswer === option ? 'default' : 'outline'}
-                      className="w-full text-left justify-start"
-                      onClick={() => handleAnswerSelect(option)}
-                    >
-                      {option}
-                    </Button>
-                  ))}
-                  
-                  <Button 
-                    onClick={submitAnswer} 
-                    disabled={!selectedAnswer}
-                    className="w-full mt-6"
-                  >
-                    {language === 'de' ? 'Antwort bestätigen' : 'Submit Answer'}
-                  </Button>
                 </div>
               )}
-              
-              {showResult && (
-                <div className="text-center">
-                  <p className={`text-2xl font-bold mb-4 ${selectedAnswer === currentQuestion.correct ? 'text-green-600' : 'text-red-600'}`}>
-                    {selectedAnswer === currentQuestion.correct 
-                      ? (language === 'de' ? 'Richtig!' : 'Correct!') 
-                      : (language === 'de' ? 'Falsch!' : 'Wrong!')
-                    }
-                  </p>
-                  {selectedAnswer !== currentQuestion.correct && (
-                    <p className="text-lg">
-                      {language === 'de' ? 'Richtige Antwort:' : 'Correct answer:'} {currentQuestion.correct}
-                    </p>
-                  )}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </div>
-      );
-    }
 
-    if (selectedSection === 'how-it-works') {
-      if (!selectedLanguage) {
-        return (
-          <div className="w-full max-w-4xl mx-auto p-6">
-            <div className="flex justify-between items-center mb-6">
-              <Button variant="outline" onClick={() => setSelectedSection(null)}>
-                {language === 'de' ? 'Zurück' : 'Back'}
-              </Button>
-              <h1 className="text-3xl font-bold">
-                {language === 'de' ? 'Wie es funktioniert' : 'How it works'}
-              </h1>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <Card 
-                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary"
-                onClick={() => setSelectedLanguage('lua')}
+              <Button 
+                onClick={resetGame} 
+                variant="outline" 
+                className="w-full border-red-500/50 text-red-400 hover:bg-red-500/10"
               >
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Lua</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-center text-muted-foreground mb-4">
-                    {language === 'de' 
-                      ? 'Die ursprüngliche, bewährte Skriptsprache'
-                      : 'The original, proven scripting language'
-                    }
-                  </p>
-                  <ul className="space-y-2 text-sm">
-                    <li>✓ {language === 'de' ? 'Einfache Syntax' : 'Simple syntax'}</li>
-                    <li>✓ {language === 'de' ? 'Leichtgewichtig' : 'Lightweight'}</li>
-                    <li>✓ {language === 'de' ? 'Weit verbreitet' : 'Widely adopted'}</li>
-                    <li>✓ {language === 'de' ? 'Stabile Basis' : 'Stable foundation'}</li>
-                  </ul>
-                </CardContent>
-              </Card>
-
-              <Card 
-                className="cursor-pointer hover:shadow-lg transition-shadow border-2 hover:border-primary"
-                onClick={() => setSelectedLanguage('luau')}
-              >
-                <CardHeader className="text-center">
-                  <CardTitle className="text-2xl">Luau</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-center text-muted-foreground mb-4">
-                    {language === 'de' 
-                      ? 'Die moderne Weiterentwicklung von Roblox'
-                      : 'The modern evolution by Roblox'
-                    }
-                  </p>
-                  <ul className="space-y-2 text-sm">
-                    <li>✓ {language === 'de' ? 'Typisierung' : 'Type checking'}</li>
-                    <li>✓ {language === 'de' ? 'Bessere Performance' : 'Better performance'}</li>
-                    <li>✓ {language === 'de' ? 'Moderne Features' : 'Modern features'}</li>
-                    <li>✓ {language === 'de' ? 'Erweiterte APIs' : 'Extended APIs'}</li>
-                  </ul>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        );
-      }
-
-      const luaTopics = [
-        { 
-          id: 'basics', 
-          name: language === 'de' ? 'Grundlagen' : 'Basics',
-          desc: language === 'de' ? 'Variablen, Datentypen, print()' : 'Variables, data types, print()'
-        },
-        { 
-          id: 'functions', 
-          name: language === 'de' ? 'Funktionen' : 'Functions',
-          desc: language === 'de' ? 'Funktionen definieren und aufrufen' : 'Define and call functions'
-        },
-        { 
-          id: 'tables', 
-          name: language === 'de' ? 'Tabellen' : 'Tables',
-          desc: language === 'de' ? 'Arrays und Dictionaries' : 'Arrays and dictionaries'
-        },
-        { 
-          id: 'loops', 
-          name: language === 'de' ? 'Schleifen' : 'Loops',
-          desc: language === 'de' ? 'for, while, repeat Schleifen' : 'for, while, repeat loops'
-        },
-        { 
-          id: 'conditions', 
-          name: language === 'de' ? 'Bedingungen' : 'Conditions',
-          desc: language === 'de' ? 'if, else, elseif Anweisungen' : 'if, else, elseif statements'
-        },
-        { 
-          id: 'strings', 
-          name: language === 'de' ? 'Strings' : 'Strings',
-          desc: language === 'de' ? 'Textverarbeitung und -manipulation' : 'Text processing and manipulation'
-        }
-      ];
-
-      const luauTopics = [
-        ...luaTopics,
-        { 
-          id: 'types', 
-          name: language === 'de' ? 'Typisierung' : 'Type System',
-          desc: language === 'de' ? 'Optionale Typen und Typsicherheit' : 'Optional types and type safety'
-        },
-        { 
-          id: 'generics', 
-          name: language === 'de' ? 'Generics' : 'Generics',
-          desc: language === 'de' ? 'Generische Typen und Funktionen' : 'Generic types and functions'
-        },
-        { 
-          id: 'modules', 
-          name: language === 'de' ? 'Module' : 'Modules',
-          desc: language === 'de' ? 'Modulares Programmieren' : 'Modular programming'
-        }
-      ];
-
-      const currentTopics = selectedLanguage === 'lua' ? luaTopics : luauTopics;
-
-      if (!selectedTopic) {
-        return (
-          <div className="w-full max-w-4xl mx-auto p-6">
-            <div className="flex justify-between items-center mb-6">
-              <Button variant="outline" onClick={() => setSelectedLanguage(null)}>
-                {language === 'de' ? 'Zurück' : 'Back'}
+                {language === 'de' ? 'Spiel zurücksetzen' : 'Reset Game'}
               </Button>
-              <h1 className="text-3xl font-bold">
-                {selectedLanguage === 'lua' ? 'Lua' : 'Luau'} - {language === 'de' ? 'Themen' : 'Topics'}
-              </h1>
-            </div>
-            
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {currentTopics.map((topic) => (
-                <Card 
-                  key={topic.id}
-                  className="cursor-pointer hover:shadow-lg transition-shadow border hover:border-primary"
-                  onClick={() => setSelectedTopic(topic.id)}
-                >
-                  <CardHeader>
-                    <CardTitle className="text-lg">{topic.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground">{topic.desc}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        );
-      }
-
-      // Topic content display logic here...
-      const getTopicContent = () => {
-        switch (selectedTopic) {
-          case 'basics':
-            return (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{language === 'de' ? 'Variablen und Datentypen' : 'Variables and Data Types'}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="mb-4">
-                      {language === 'de' 
-                        ? 'Lua hat mehrere grundlegende Datentypen:'
-                        : 'Lua has several basic data types:'
-                      }
-                    </p>
-                    <pre className="bg-muted p-4 rounded">
-{`-- Zahlen (Numbers)
-local age = 25
-local pi = 3.14159
-
--- Strings (Text)
-local name = "Max"
-local message = 'Hallo Welt!'
-
--- Booleans (Wahrheitswerte)
-local isActive = true
-local isComplete = false
-
--- Nil (Leer/Nichts)
-local empty = nil
-
--- Ausgabe
-print(age)      -- 25
-print(name)     -- Max
-print(isActive) -- true
-print(empty)    -- nil`}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-          
-          case 'functions':
-            return (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{language === 'de' ? 'Funktionen definieren' : 'Defining Functions'}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="mb-4">
-                      {language === 'de' 
-                        ? 'Funktionen sind Codeblöcke, die wiederverwendet werden können:'
-                        : 'Functions are reusable blocks of code:'
-                      }
-                    </p>
-                    <pre className="bg-muted p-4 rounded">
-{`-- Einfache Funktion ohne Parameter
-function sayHello()
-    print("Hallo!")
-end
-
--- Funktion mit Parametern
-function greet(name, age)
-    print("Hallo " .. name .. ", du bist " .. age .. " Jahre alt!")
-end
-
--- Funktion mit Rückgabewert
-function add(a, b)
-    return a + b
-end
-
--- Funktionen aufrufen
-sayHello()              -- Hallo!
-greet("Max", 25)        -- Hallo Max, du bist 25 Jahre alt!
-local result = add(5, 3) -- result = 8
-print(result)           -- 8`}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-
-          case 'tables':
-            return (
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>{language === 'de' ? 'Tabellen (Arrays & Dictionaries)' : 'Tables (Arrays & Dictionaries)'}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="mb-4">
-                      {language === 'de' 
-                        ? 'Tabellen sind Luas einzige Datenstruktur und sehr vielseitig:'
-                        : 'Tables are Lua\'s only data structure and very versatile:'
-                      }
-                    </p>
-                    <pre className="bg-muted p-4 rounded">
-{`-- Array (Liste)
-local fruits = {"Apfel", "Banane", "Orange"}
-print(fruits[1])  -- Apfel (Index startet bei 1!)
-print(fruits[2])  -- Banane
-
--- Dictionary (Schlüssel-Wert-Paare)
-local person = {
-    name = "Max",
-    age = 25,
-    city = "Berlin"
-}
-print(person.name)  -- Max
-print(person["age"]) -- 25
-
--- Gemischte Tabelle
-local mixed = {
-    "erstes Element",
-    name = "Max",
-    42,
-    active = true
-}
-print(mixed[1])      -- erstes Element
-print(mixed.name)    -- Max
-print(mixed[2])      -- 42`}
-                    </pre>
-                  </CardContent>
-                </Card>
-              </div>
-            );
-
-          default:
-            return (
-              <Card>
-                <CardContent>
-                  <p>{language === 'de' ? 'Inhalt wird geladen...' : 'Content loading...'}</p>
-                </CardContent>
-              </Card>
-            );
-        }
-      };
-
-      return (
-        <div className="w-full max-w-4xl mx-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={() => setSelectedTopic(null)}>
-              {language === 'de' ? 'Zurück zu Themen' : 'Back to Topics'}
-            </Button>
-            <h1 className="text-3xl font-bold">
-              {selectedLanguage === 'lua' ? 'Lua' : 'Luau'} - {currentTopics.find(t => t.id === selectedTopic)?.name}
-            </h1>
-          </div>
-          
-          {getTopicContent()}
-        </div>
-      );
-    }
-
-    if (selectedSection === 'tutorial') {
-      return (
-        <div className="w-full max-w-4xl mx-auto p-6">
-          <div className="flex justify-between items-center mb-6">
-            <Button variant="outline" onClick={() => setSelectedSection(null)}>
-              {language === 'de' ? 'Zurück' : 'Back'}
-            </Button>
-            <h1 className="text-3xl font-bold">
-              {language === 'de' ? 'Tutorial' : 'Tutorial'}
-            </h1>
-          </div>
-          
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Schritt 1: Variablen erstellen' : 'Step 1: Creating Variables'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">
-                  {language === 'de' 
-                    ? 'In Lua können Sie Variablen mit dem Schlüsselwort "local" erstellen:'
-                    : 'In Lua, you can create variables using the "local" keyword:'
-                  }
-                </p>
-                <pre className="bg-muted p-4 rounded">
-{`local message = "Hallo Welt!"
-local number = 42
-local isActive = true
-
-print(message)
-print(number)
-print(isActive)`}
-                </pre>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Schritt 2: Mathematische Operationen' : 'Step 2: Mathematical Operations'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">
-                  {language === 'de' 
-                    ? 'Lua unterstützt alle grundlegenden mathematischen Operationen:'
-                    : 'Lua supports all basic mathematical operations:'
-                  }
-                </p>
-                <pre className="bg-muted p-4 rounded">
-{`local a = 10
-local b = 5
-
-print(a + b)  -- Addition: 15
-print(a - b)  -- Subtraktion: 5
-print(a * b)  -- Multiplikation: 50
-print(a / b)  -- Division: 2`}
-                </pre>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Schritt 3: Schleifen verwenden' : 'Step 3: Using Loops'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">
-                  {language === 'de' 
-                    ? 'For-Schleifen sind perfekt für wiederholende Aufgaben:'
-                    : 'For loops are perfect for repetitive tasks:'
-                  }
-                </p>
-                <pre className="bg-muted p-4 rounded">
-{`-- Zahlen von 1 bis 5 ausgeben
-for i = 1, 5 do
-  print("Zahl: " .. i)
-end
-
--- While-Schleife
-local count = 0
-while count < 3 do
-  print("Count: " .. count)
-  count = count + 1
-end`}
-                </pre>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Schritt 4: Bedingungen' : 'Step 4: Conditions'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">
-                  {language === 'de' 
-                    ? 'If-Anweisungen helfen bei Entscheidungen:'
-                    : 'If statements help with decision making:'
-                  }
-                </p>
-                <pre className="bg-muted p-4 rounded">
-{`local age = 18
-
-if age >= 18 then
-  print("Du bist volljährig!")
-else
-  print("Du bist minderjährig!")
-end
-
--- Mehrere Bedingungen
-local score = 85
-
-if score >= 90 then
-  print("Sehr gut!")
-elseif score >= 70 then
-  print("Gut!")
-else
-  print("Verbesserung nötig!")
-end`}
-                </pre>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>{language === 'de' ? 'Schritt 5: Funktionen definieren' : 'Step 5: Defining Functions'}</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="mb-4">
-                  {language === 'de' 
-                    ? 'Funktionen organisieren Ihren Code:'
-                    : 'Functions organize your code:'
-                  }
-                </p>
-                <pre className="bg-muted p-4 rounded">
-{`function sayHello(name)
-  print("Hallo " .. name .. "!")
-end
-
-function add(a, b)
-  return a + b
-end
-
-sayHello("Max")
-local result = add(5, 3)
-print("Ergebnis: " .. result)`}
-                </pre>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      );
-    }
-  }
-
-  return null;
+            </>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
 };
 
 export default GameInterface;
