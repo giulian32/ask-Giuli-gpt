@@ -40,22 +40,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ language, onClose }) => {
   const loadVisitors = async () => {
     setLoading(true);
     try {
-      // Get Supabase URL and anon key from environment
-      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'your-supabase-url';
-      const supabaseKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'your-supabase-anon-key';
-      
-      const supabase = createClient(supabaseUrl, supabaseKey);
-      
-      const { data, error } = await supabase
-        .from('visitors')
-        .select('*')
-        .order('visited_at', { ascending: false })
-        .limit(100);
+      const response = await fetch('/functions/v1/admin-visitors', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      if (error) {
-        throw error;
+      if (!response.ok) {
+        throw new Error('Failed to load visitors');
       }
 
+      const data = await response.json();
       setVisitors(data || []);
     } catch (err) {
       console.error('Error loading visitors:', err);
