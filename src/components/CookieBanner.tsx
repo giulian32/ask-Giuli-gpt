@@ -25,21 +25,28 @@ const CookieBanner: React.FC<CookieBannerProps> = ({ language }) => {
     setIsTracking(true);
     
     try {
-      const response = await fetch('/functions/v1/track-visitor', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          userAgent: navigator.userAgent,
-          acceptLanguage: navigator.language,
-        }),
-      });
+      const { createClient } = await import('@supabase/supabase-js');
       
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Visitor tracked:', data);
+      const supabaseClient = createClient(
+        'https://vfkzqmhbbgppjhgkqhzl.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZma3pxbWhiYmdwcGpoZ2txaHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0MDA0MjMsImV4cCI6MjA2OTk3NjQyM30.yCgjVVR7nWSlA0ITYX6A2J1eObp3lQFbXgUQCzg7bKo'
+      );
+
+      const { error } = await supabaseClient
+        .from('visitors')
+        .insert({
+          ip_address: 'Unknown', // IP will be set by server-side function
+          user_agent: navigator.userAgent,
+          accept_language: navigator.language,
+          visited_at: new Date().toISOString(),
+        });
+
+      if (error) {
+        console.error('Error tracking visitor:', error);
+        throw error;
       }
+
+      console.log('Visitor tracked successfully');
     } catch (error) {
       console.error('Error tracking visitor:', error);
     }

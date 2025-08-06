@@ -17,9 +17,14 @@ interface Message {
   timestamp: Date;
 }
 
+interface ChatInterfaceProps {
+  language?: 'en' | 'de';
+  onShowAdmin?: () => void;
+}
+
 type ChatMode = 'normal' | 'witz' | 'böse' | 'mensch' | 'spiel';
 
-const ChatInterface = () => {
+const ChatInterface = ({ language: propLanguage = 'de', onShowAdmin }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -201,7 +206,7 @@ const ChatInterface = () => {
 
   // Wenn Spiel-Modus aktiviert ist, zeige GameInterface
   if (chatMode === 'spiel') {
-    return <GameInterface language={language} />;
+    return <GameInterface language={language} onBackToChat={() => setChatMode('normal')} onShowAdmin={onShowAdmin} />;
   }
 
   return (
@@ -325,6 +330,26 @@ const ChatInterface = () => {
                           {language === 'de' ? '🇺🇸 EN' : '🇩🇪 DE'}
                         </Button>
                       </div>
+                      {onShowAdmin && (
+                      <div className="flex items-center justify-between mt-4">
+                        <div>
+                          <p className={`font-medium transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>
+                            👨‍💼 Admin
+                          </p>
+                          <p className={`text-sm transition-colors duration-500 ${isDarkMode ? 'text-white/70' : 'text-gray-600'}`}>
+                            IP-Tracking verwalten
+                          </p>
+                        </div>
+                        <Button
+                          onClick={onShowAdmin}
+                          variant="outline"
+                          size="sm"
+                          className={`transition-all duration-300 hover:scale-105 ${isDarkMode ? 'border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/10' : 'border-yellow-600 text-yellow-600 hover:bg-yellow-100'}`}
+                        >
+                          Admin Panel
+                        </Button>
+                      </div>
+                      )}
                     </div>
                   </div>
                   
@@ -336,91 +361,73 @@ const ChatInterface = () => {
                           onClick={() => setChatMode('normal')}
                           variant={chatMode === 'normal' ? 'default' : 'outline'}
                           size="sm"
-                          className={`transition-all duration-300 hover:scale-105 ${
-                            chatMode === 'normal' 
-                              ? 'bg-primary text-white' 
-                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
+                          className="text-xs"
                         >
-                          😊 Normal
+                          🤖 Normal
                         </Button>
                         <Button
                           onClick={() => setChatMode('witz')}
                           variant={chatMode === 'witz' ? 'default' : 'outline'}
                           size="sm"
-                          className={`transition-all duration-300 hover:scale-105 ${
-                            chatMode === 'witz' 
-                              ? 'bg-primary text-white' 
-                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
+                          className="text-xs"
                         >
                           😂 Witz
                         </Button>
-                      </div>
-                      <div className="grid grid-cols-2 gap-2">
                         <Button
                           onClick={() => setChatMode('böse')}
                           variant={chatMode === 'böse' ? 'default' : 'outline'}
                           size="sm"
-                          className={`transition-all duration-300 hover:scale-105 ${
-                            chatMode === 'böse' 
-                              ? 'bg-primary text-white' 
-                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
+                          className="text-xs"
                         >
-                          😠 Böse
+                          😤 Böse
                         </Button>
                         <Button
                           onClick={() => setChatMode('mensch')}
                           variant={chatMode === 'mensch' ? 'default' : 'outline'}
                           size="sm"
-                          className={`transition-all duration-300 hover:scale-105 ${
-                            chatMode === 'mensch' 
-                              ? 'bg-primary text-white' 
-                              : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                          }`}
+                          className="text-xs"
                         >
-                          🧑 Mensch
+                          👤 Mensch
                         </Button>
-                          <Button
-                           onClick={() => setChatMode('spiel' as ChatMode)}
-                           variant={(chatMode as string) === 'spiel' ? 'default' : 'outline'}
-                           size="sm"
-                           className={`transition-all duration-300 hover:scale-105 col-span-2 ${
-                             (chatMode as string) === 'spiel' 
-                               ? 'bg-primary text-white' 
-                               : isDarkMode ? 'border-white/20 text-white hover:bg-white/10' : 'border-gray-300 text-gray-700 hover:bg-gray-100'
-                           }`}
+                      </div>
+                        <Button
+                          onClick={() => setChatMode('spiel')}
+                          variant={'outline'}
+                          size="sm"
+                          className="w-full text-sm"
                         >
-                          🎮 Spiel
-                        </Button>
-                       </div>
-                       <p className={`text-xs mt-3 transition-colors duration-500 ${isDarkMode ? 'text-white/60' : 'text-gray-500'}`}>
-                         Wähle zwischen normalem Modus, Witz-Modus, bösen Modus, menschlichem Modus oder Spiel-Modus
-                       </p>
+                        🎮 Spiele-Hub
+                      </Button>
+                      
+                      <div className="mt-4 text-xs text-muted-foreground">
+                        <p className="mb-2">
+                          <strong>Normal:</strong> Ehrlich, hilfreich und zuverlässig
+                        </p>
+                        <p className="mb-2">
+                          <strong>Witz:</strong> Lustig und absurd, aber trotzdem hilfreich
+                        </p>
+                        <p className="mb-2">
+                          <strong>Böse:</strong> Unfreundlich und genervt (korrigiert Rechtschreibfehler)
+                        </p>
+                        <p className="mb-2">
+                          <strong>Mensch:</strong> Wie ein echter Mensch mit Fehlern
+                        </p>
+                        <p>
+                          <strong>Spiele-Hub:</strong> Zugang zu Spielen und Lua-Lernmaterial
+                        </p>
+                      </div>
                     </div>
                   </div>
                   
                   <div className="space-y-3">
-                    <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Über GiuliGPT</h3>
-                    <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                      <p className={`text-sm leading-relaxed transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
-                        🤖 <strong className="text-primary">GiuliGPT</strong> ist ein ehrlicher KI-Assistent<br/>
-                        👨‍💻 Programmiert von <strong className="text-primary-glow">Giuli</strong><br/>
-                        ⚡ Entwickelt mit <strong className="text-primary">Loveable</strong><br/>
-                        🧠 Angetrieben von <strong className="text-primary-glow">DeepSeek</strong>
-                      </p>
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3">
-                    <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>Features</h3>
-                    <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-white/5 border-white/10' : 'bg-gray-50 border-gray-200'}`}>
-                      <ul className={`text-sm space-y-2 transition-colors duration-500 ${isDarkMode ? 'text-white/80' : 'text-gray-700'}`}>
-                        <li>✅ Immer ehrliche Antworten</li>
-                        <li>🔍 Kennzeichnung unverifizierbarer Inhalte</li>
-                        <li>🚫 Niemals Lügen oder Spekulationen als Fakten</li>
-                        <li>💬 Intelligente Konversationen auf Deutsch</li>
+                    <h3 className={`font-semibold transition-colors duration-500 ${isDarkMode ? 'text-white' : 'text-gray-800'}`}>🛡️ Sicherheit & Ehrlichkeit</h3>
+                    <div className={`rounded-lg p-4 border transition-colors duration-500 ${isDarkMode ? 'bg-green-950/20 border-green-500/30' : 'bg-green-50 border-green-300'}`}>
+                      <ul className="text-xs space-y-2 text-green-300">
+                        <li>✅ Lügt niemals - sagt immer die Wahrheit</li>
+                        <li>✅ Kennzeichnet unverifizierte Informationen</li>
+                        <li>✅ Gibt zu, wenn etwas nicht gewusst wird</li>
+                        <li>✅ Keine Erfindung von "Fakten"</li>
+                        <li>✅ Ehrliche Kommunikation über Grenzen</li>
                       </ul>
                     </div>
                   </div>

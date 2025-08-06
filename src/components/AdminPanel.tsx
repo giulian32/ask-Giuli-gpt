@@ -40,18 +40,22 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ language, onClose }) => {
   const loadVisitors = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/functions/v1/admin-visitors', {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-      });
+      const supabaseClient = createClient(
+        'https://vfkzqmhbbgppjhgkqhzl.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZma3pxbWhiYmdwcGpoZ2txaHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0MDA0MjMsImV4cCI6MjA2OTk3NjQyM30.yCgjVVR7nWSlA0ITYX6A2J1eObp3lQFbXgUQCzg7bKo'
+      );
 
-      if (!response.ok) {
-        throw new Error('Failed to load visitors');
+      const { data, error } = await supabaseClient
+        .from('visitors')
+        .select('*')
+        .order('visited_at', { ascending: false })
+        .limit(100);
+
+      if (error) {
+        console.error('Error loading visitors:', error);
+        throw error;
       }
 
-      const data = await response.json();
       setVisitors(data || []);
     } catch (err) {
       console.error('Error loading visitors:', err);

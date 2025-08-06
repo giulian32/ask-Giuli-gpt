@@ -8,9 +8,11 @@ import ChatMessage from './ChatMessage';
 
 interface GameInterfaceProps {
   language: 'en' | 'de';
+  onBackToChat?: () => void;
+  onShowAdmin?: () => void;
 }
 
-const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
+const GameInterface: React.FC<GameInterfaceProps> = ({ language, onBackToChat, onShowAdmin }) => {
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [selectedSection, setSelectedSection] = useState<string | null>(null);
   
@@ -413,15 +415,53 @@ const GameInterface: React.FC<GameInterfaceProps> = ({ language }) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto p-6 space-y-8">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
-          {language === 'de' ? '🎮 Spiele-Hub' : '🎮 Game Hub'}
-        </h1>
-        <p className="text-muted-foreground text-lg">
-          {language === 'de' ? 'Wähle ein Spiel oder lerne Lua/Luau programmieren!' : 'Choose a game or learn Lua/Luau programming!'}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900">
+      {/* Header */}
+      <header className="p-4 border-b border-white/10 backdrop-blur-sm bg-black/20">
+        <div className="max-w-7xl mx-auto flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent">
+              🎮 Game Hub
+            </h1>
+            <Badge variant="outline" className="text-green-400 border-green-400">
+              LIVE
+            </Badge>
+          </div>
+          
+          <div className="flex items-center gap-2">
+            {onBackToChat && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onBackToChat}
+                className="border-blue-400/50 text-blue-400 hover:bg-blue-400/10"
+              >
+                🤖 AI Chat
+              </Button>
+            )}
+            {onShowAdmin && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={onShowAdmin}
+                className="border-yellow-400/50 text-yellow-400 hover:bg-yellow-400/10"
+              >
+                👨‍💼 Admin
+              </Button>
+            )}
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-4xl mx-auto p-6 space-y-8">
+        <div className="text-center">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-400 to-purple-400 bg-clip-text text-transparent mb-4">
+            {language === 'de' ? '🎮 Spiele-Hub' : '🎮 Game Hub'}
+          </h1>
+          <p className="text-muted-foreground text-lg">
+            {language === 'de' ? 'Wähle ein Spiel oder lerne Lua/Luau programmieren!' : 'Choose a game or learn Lua/Luau programming!'}
+          </p>
+        </div>
 
       {/* Game Selection */}
       {!selectedGame && !selectedSection && (
@@ -1016,6 +1056,7 @@ person.age = 31      -- ${language === 'de' ? 'Wert ändern' : 'Change value'}`}
           </CardContent>
         </Card>
       )}
+      </div>
     </div>
   );
 };
