@@ -5,7 +5,7 @@ import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { createClient } from '@supabase/supabase-js';
+
 
 interface AdminPanelProps {
   language: 'en' | 'de';
@@ -28,7 +28,7 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ language, onClose }) => {
   const [error, setError] = useState('');
 
   const authenticate = () => {
-    if (password === 'admin123') {
+    if (password === 'secure123') {
       setIsAuthenticated(true);
       setError('');
       loadVisitors();
@@ -40,22 +40,18 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ language, onClose }) => {
   const loadVisitors = async () => {
     setLoading(true);
     try {
-      const supabaseClient = createClient(
-        'https://vfkzqmhbbgppjhgkqhzl.supabase.co',
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZma3pxbWhiYmdwcGpoZ2txaHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0MDA0MjMsImV4cCI6MjA2OTk3NjQyM30.yCgjVVR7nWSlA0ITYX6A2J1eObp3lQFbXgUQCzg7bKo'
-      );
+      const response = await fetch('/functions/v1/admin-visitors', {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
 
-      const { data, error } = await supabaseClient
-        .from('visitors')
-        .select('*')
-        .order('visited_at', { ascending: false })
-        .limit(100);
-
-      if (error) {
-        console.error('Error loading visitors:', error);
-        throw error;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
+      const data = await response.json();
       setVisitors(data || []);
     } catch (err) {
       console.error('Error loading visitors:', err);
