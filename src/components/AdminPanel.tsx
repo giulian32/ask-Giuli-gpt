@@ -40,19 +40,23 @@ const AdminPanel: React.FC<AdminPanelProps> = ({ language, onClose }) => {
   const loadVisitors = async () => {
     setLoading(true);
     try {
-      const response = await fetch('/functions/v1/admin-visitors', {
+      const response = await fetch('https://vfkzqmhbbgppjhgkqhzl.supabase.co/functions/v1/admin-visitors', {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
+          'Authorization': 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZma3pxbWhiYmdwcGpoZ2txaHpsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTQ0MDA0MjMsImV4cCI6MjA2OTk3NjQyM30.yCgjVVR7nWSlA0ITYX6A2J1eObp3lQFbXgUQCzg7bKo'
         },
       });
 
       if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Response error:', errorText);
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const data = await response.json();
       setVisitors(data || []);
+      setError(''); // Clear any previous errors
     } catch (err) {
       console.error('Error loading visitors:', err);
       setError(language === 'de' ? 'Fehler beim Laden der Daten' : 'Error loading data');
